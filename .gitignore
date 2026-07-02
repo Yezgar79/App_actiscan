@@ -11,3 +11,6 @@ dist/
 
 # Otros
 .claude/
+
+.env.local
+.env*.local
