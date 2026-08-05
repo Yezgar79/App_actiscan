@@ -16,4 +16,4 @@ RUN mkdir -p /tmp/flask_sessions
 
 EXPOSE 5000
 
-CMD ["python", "-m", "gunicorn", "--bind", "0.0.0.0:5000", "--workers", "2", "--timeout", "60", "run:app"]
+CMD sh -c "python -m gunicorn --bind 0.0.0.0:${PORT:-5000} --workers 2 --timeout 60 run:app"
