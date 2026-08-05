@@ -3,10 +3,11 @@
 {% block breadcrumb %}<span class="breadcrumb-sep">›</span><span>Monitoreo</span>{% endblock %}
 {% block content %}
 <div class="page-header">
-  <div><h1 class="page-title"><i class="bi bi-display"></i> Monitoreo del Sistema</h1><p class="page-subtitle">Estado de servicios y disponibilidad</p></div>
+  <div><h1 class="page-title"><i class="bi bi-display"></i> Monitoreo del Sistema</h1><p class="page-subtitle">Estado de servicios, métricas y seguridad (Prometheus + Grafana)</p></div>
   <button onclick="location.reload()" class="btn btn-ghost"><i class="bi bi-arrow-repeat"></i> Actualizar</button>
 </div>
 
+<!-- Estado de Servicios -->
 <div class="stats-grid" style="margin-bottom:1.5rem;">
   <div class="stat-card {% if health.status == 'ok' %}stat-success{% else %}stat-danger{% endif %}">
     <div class="stat-icon">{{ '<i class="bi bi-check-circle-fill"></i>' if health.status == 'ok' else '<i class="bi bi-x-circle-fill"></i>' }}</div>
@@ -23,14 +24,117 @@
     <div class="stat-label">Versión API</div>
     <div style="font-size:1.2rem;font-weight:700;">{{ health.version or 'N/D' }}</div>
   </div>
+  <div class="stat-card stat-info" id="prometheusStatus">
+    <div class="stat-icon"><i class="bi bi-bar-chart-line-fill"></i></div>
+    <div class="stat-label">Prometheus</div>
+    <div style="font-size:1.2rem;font-weight:700;" id="prometheusText">Verificando…</div>
+  </div>
 </div>
 
 {% if health.database == 'error' and health.database_error %}
 <div class="alert alert-danger"><i class="bi bi-x-circle-fill"></i> {{ health.database_error }}</div>
 {% endif %}
 
+<!-- Herramientas de Monitoreo -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.5rem;">
+
+  <!-- Grafana -->
+  <div class="card">
+    <div class="card-header" style="display:flex;align-items:center;gap:.5rem;">
+      <i class="bi bi-graph-up-arrow" style="color:#E6521F;"></i> Grafana — Dashboards
+    </div>
+    <div class="card-body" style="padding:1rem;">
+      <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:1rem;">
+        Visualización en tiempo real de métricas del sistema: CPU, RAM, solicitudes HTTP, latencia del API y estado del balanceador de carga.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.875rem;">
+        <div style="display:flex;align-items:center;gap:.5rem;"><i class="bi bi-cpu" style="color:var(--primary);"></i><strong>Node Exporter:</strong> CPU, RAM, Disco</div>
+        <div style="display:flex;align-items:center;gap:.5rem;"><i class="bi bi-hdd-network" style="color:var(--primary);"></i><strong>Nginx Exporter:</strong> Conexiones, Tráfico</div>
+        <div style="display:flex;align-items:center;gap:.5rem;"><i class="bi bi-speedometer2" style="color:var(--primary);"></i><strong>FastAPI Metrics:</strong> Latencia p50/p95/p99</div>
+      </div>
+    </div>
+    <div class="card-footer" style="display:flex;gap:.75rem;">
+      <a href="http://localhost:3001" target="_blank" class="btn btn-primary btn-sm"><i class="bi bi-box-arrow-up-right"></i> Abrir Grafana</a>
+      <span style="font-size:.75rem;color:var(--text-muted);align-self:center;">admin / actiscan123</span>
+    </div>
+  </div>
+
+  <!-- Prometheus -->
+  <div class="card">
+    <div class="card-header" style="display:flex;align-items:center;gap:.5rem;">
+      <i class="bi bi-fire" style="color:#E6521F;"></i> Prometheus — Recolección de Métricas
+    </div>
+    <div class="card-body" style="padding:1rem;">
+      <p style="font-size:.875rem;color:var(--text-muted);margin-bottom:1rem;">
+        Motor de métricas que raspa los endpoints <code>/metrics</code> cada 15 segundos. Alimenta los dashboards de Grafana.
+      </p>
+      <div style="display:flex;flex-direction:column;gap:.5rem;font-size:.875rem;">
+        <div style="display:flex;align-items:center;gap:.5rem;"><i class="bi bi-check2-circle" style="color:var(--success);"></i><strong>actiscan-backend-1</strong> — backend:8000/metrics</div>
+        <div style="display:flex;align-items:center;gap:.5rem;"><i class="bi bi-check2-circle" style="color:var(--success);"></i><strong>actiscan-backend-2</strong> — backend2:8000/metrics</div>
+        <div style="display:flex;align-items:center;gap:.5rem;"><i class="bi bi-check2-circle" style="color:var(--success);"></i><strong>node_exporter</strong> — node_exporter:9100</div>
+        <div style="display:flex;align-items:center;gap:.5rem;"><i class="bi bi-check2-circle" style="color:var(--success);"></i><strong>nginx_exporter</strong> — nginx_exporter:9113</div>
+      </div>
+    </div>
+    <div class="card-footer">
+      <a href="http://localhost:9090" target="_blank" class="btn btn-secondary btn-sm"><i class="bi bi-box-arrow-up-right"></i> Abrir Prometheus</a>
+    </div>
+  </div>
+
+</div>
+
+<!-- Firewall -->
+<div class="card" style="margin-bottom:1.5rem;">
+  <div class="card-header" style="display:flex;align-items:center;gap:.5rem;">
+    <i class="bi bi-shield-lock-fill" style="color:var(--primary);"></i> Firewall — Reglas Activas (Nginx)
+  </div>
+  <div class="card-body" style="padding:0;">
+    <table>
+      <thead>
+        <tr>
+          <th>Regla</th>
+          <th>Configuración</th>
+          <th>Estado</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><i class="bi bi-speedometer2"></i> Rate Limiting API</td>
+          <td>60 req/min por IP — burst 30</td>
+          <td><span class="badge badge-success">Activo</span></td>
+        </tr>
+        <tr>
+          <td><i class="bi bi-lock-fill"></i> Anti Brute-Force Login</td>
+          <td>10 req/min por IP — burst 5</td>
+          <td><span class="badge badge-success">Activo</span></td>
+        </tr>
+        <tr>
+          <td><i class="bi bi-people-fill"></i> Límite de Conexiones</td>
+          <td>20 conexiones simultáneas por IP</td>
+          <td><span class="badge badge-success">Activo</span></td>
+        </tr>
+        <tr>
+          <td><i class="bi bi-robot"></i> Bloqueo de Bots Maliciosos</td>
+          <td>nikto, sqlmap, nmap, masscan, dirbuster, hydra</td>
+          <td><span class="badge badge-success">Activo</span></td>
+        </tr>
+        <tr>
+          <td><i class="bi bi-shield-check"></i> Headers de Seguridad</td>
+          <td>HSTS, X-Frame-Options, X-Content-Type, X-XSS-Protection</td>
+          <td><span class="badge badge-success">Activo</span></td>
+        </tr>
+        <tr>
+          <td><i class="bi bi-lock"></i> SSL/TLS</td>
+          <td>TLSv1.2 / TLSv1.3 — Certificado activo</td>
+          <td><span class="badge badge-success">Activo</span></td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<!-- Info del servicio -->
 <div class="card">
-  <div class="card-header">Información del servicio</div>
+  <div class="card-header">Detalles del servicio API</div>
   <div class="card-body">
     <table style="width:auto;">
       <tbody>
@@ -51,5 +155,16 @@
 {% block extra_js %}
 <script>
 document.getElementById('lastCheck').textContent = new Date().toLocaleString('es-MX');
+
+// Verifica si Prometheus responde
+fetch('http://localhost:9090/-/healthy', { mode: 'no-cors' })
+  .then(() => {
+    document.getElementById('prometheusStatus').classList.remove('stat-info');
+    document.getElementById('prometheusStatus').classList.add('stat-success');
+    document.getElementById('prometheusText').textContent = 'ACTIVO';
+  })
+  .catch(() => {
+    document.getElementById('prometheusText').textContent = 'LOCAL';
+  });
 </script>
 {% endblock %}

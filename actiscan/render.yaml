@@ -19,7 +19,28 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: ALLOWED_ORIGINS
-        value: https://actiscan.vercel.app
+        value: https://actiscan-web.onrender.com
+
+  - type: web
+    name: actiscan-web
+    runtime: python
+    rootDir: web
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn --bind 0.0.0.0:$PORT --workers 2 --timeout 60 run:app
+    envVars:
+      - key: SECRET_KEY
+        generateValue: true
+      - key: API_BASE_URL
+        fromService:
+          name: actiscan-api
+          type: web
+          property: host
+      - key: FLASK_ENV
+        value: production
+      - key: SESSION_COOKIE_SECURE
+        value: "true"
+      - key: WTF_CSRF_ENABLED
+        value: "true"
 
 databases:
   - name: actiscan-db
