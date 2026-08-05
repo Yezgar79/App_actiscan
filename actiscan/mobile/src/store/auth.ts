@@ -5,13 +5,17 @@ interface User {
   id: string
   name: string
   email: string
-  role: "admin" | "auditor" | "viewer"
+  role: "super_admin" | "admin" | "auditor" | "viewer"
   assigned_location?: string
+  employee_number?: string
+  is_active?: boolean
+  last_login?: string
 }
 
 interface AuthState {
   user: User | null
   loading: boolean
+  initialized: boolean   // true una vez que fetchMe terminó (éxito o fallo)
   login: (email: string, password: string) => Promise<void>
   logout: () => Promise<void>
   fetchMe: () => Promise<void>
@@ -20,6 +24,7 @@ interface AuthState {
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   loading: false,
+  initialized: false,
 
   login: async (email, password) => {
     set({ loading: true })
@@ -27,7 +32,7 @@ export const useAuthStore = create<AuthState>((set) => ({
       const { data } = await api.post("/api/auth/login", { email, password })
       await storeTokens(data.access_token, data.refresh_token)
       const me = await api.get("/api/auth/me")
-      set({ user: me.data, loading: false })
+      set({ user: me.data, loading: false, initialized: true })
     } catch (err) {
       set({ loading: false })
       throw err
@@ -36,15 +41,17 @@ export const useAuthStore = create<AuthState>((set) => ({
 
   logout: async () => {
     await clearTokens()
-    set({ user: null })
+    set({ user: null, initialized: true })
   },
 
   fetchMe: async () => {
     try {
       const { data } = await api.get("/api/auth/me")
-      set({ user: data })
+      set({ user: data, initialized: true })
     } catch {
-      set({ user: null })
+      // Token inválido o expirado — limpiar sesión
+      await clearTokens()
+      set({ user: null, initialized: true })
     }
   },
 }))

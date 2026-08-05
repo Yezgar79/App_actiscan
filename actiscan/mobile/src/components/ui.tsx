@@ -65,17 +65,23 @@ interface InputProps {
   keyboardType?: any
   autoCapitalize?: any
   style?: ViewStyle
+  rightElement?: React.ReactNode
 }
 
-export function Input({ label, error, style, ...props }: InputProps) {
+export function Input({ label, error, style, rightElement, ...props }: InputProps) {
   return (
     <View style={{ marginBottom: Spacing.md }}>
       {label && <Text style={styles.label}>{label}</Text>}
-      <TextInput
-        style={[styles.input, error ? styles.inputError : null, style]}
-        placeholderTextColor={Colors.textMuted}
-        {...props}
-      />
+      <View style={[styles.inputRow, error ? styles.inputError : null]}>
+        <TextInput
+          style={[styles.input, { flex: 1, borderWidth: 0 }, style]}
+          placeholderTextColor={Colors.textMuted}
+          {...props}
+        />
+        {rightElement && (
+          <View style={styles.inputRight}>{rightElement}</View>
+        )}
+      </View>
       {error && <Text style={styles.errorText}>{error}</Text>}
     </View>
   )
@@ -95,9 +101,13 @@ const ASSET_BADGE: Record<AssetStatus, { label: string; bg: string; color: strin
 }
 
 const RESULT_BADGE: Record<AuditItemResult, { label: string; bg: string; color: string }> = {
-  presente: { label: "Presente", bg: Colors.successBg, color: Colors.success },
-  faltante: { label: "Faltante", bg: Colors.dangerBg,  color: Colors.danger },
-  alerta:   { label: "Alerta",   bg: Colors.warningBg, color: Colors.warning },
+  presente:     { label: "Encontrado",    bg: Colors.successBg, color: Colors.success        },
+  faltante:     { label: "No encontrado", bg: Colors.dangerBg,  color: Colors.danger         },
+  danado:       { label: "Dañado",        bg: Colors.warningBg, color: Colors.warning        },
+  reubicado:    { label: "Reubicado",     bg: Colors.infoBg,    color: Colors.info           },
+  no_accesible: { label: "No accesible",  bg: "#f3e8ff",        color: "#9333ea"             },
+  no_aplica:    { label: "No aplica",     bg: "#F3F4F6",        color: Colors.textSecondary  },
+  alerta:       { label: "Alerta",        bg: Colors.warningBg, color: Colors.warning        },
 }
 
 export function AssetStatusBadge({ status }: { status: AssetStatus }) {
@@ -145,11 +155,16 @@ const styles = StyleSheet.create({
   btnInner: { flexDirection: "row", alignItems: "center", gap: 8 },
   btnText:  { fontSize: FontSize.base, fontWeight: "600" },
   label:      { fontSize: FontSize.sm, fontWeight: "500", color: Colors.textSecondary, marginBottom: 5 },
-  input:      {
+  inputRow:   {
+    flexDirection: "row", alignItems: "center",
     borderWidth: 1, borderColor: Colors.border, borderRadius: Radius.md,
-    paddingHorizontal: Spacing.md, paddingVertical: 11, fontSize: FontSize.base,
-    backgroundColor: Colors.white, color: Colors.textPrimary,
+    backgroundColor: Colors.white,
   },
+  input:      {
+    paddingHorizontal: Spacing.md, paddingVertical: 11, fontSize: FontSize.base,
+    color: Colors.textPrimary,
+  },
+  inputRight: { paddingRight: Spacing.md, justifyContent: "center" },
   inputError: { borderColor: Colors.danger },
   errorText:  { fontSize: FontSize.xs, color: Colors.danger, marginTop: 3 },
   card: {

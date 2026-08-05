@@ -1,0 +1,147 @@
+{% extends "admin/layout.html" %}
+{% block title %}{{ audit.audit_code if audit else 'Auditoría' }}{% endblock %}
+{% block breadcrumb %}
+  <span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.audits') }}">Auditorías</a>
+  <span class="breadcrumb-sep">›</span><span>{{ audit.audit_code if audit else '' }}</span>
+{% endblock %}
+{% block content %}
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+{% if audit %}
+{% set total = audit['items']|length %}
+{% set approved = audit['items']|selectattr('approved_at')|list|length %}
+{% set returned_pending = audit['items']|selectattr('returned_at')|selectattr('approved_at','none')|list|length %}
+{% set pct = ((approved / total * 100)|int) if total > 0 else 0 %}
+
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ audit.title }}</h1>
+    <div class="d-flex gap-1 align-center mt-1">
+      <span class="badge badge-dark" style="font-family:monospace;">{{ audit.audit_code or audit.id[:8] }}</span>
+      <span class="badge status-{{ audit.status }}">{{ {'en_curso':'En curso','completada':'Completada','cancelada':'Cancelada'}.get(audit.status, audit.status) }}</span>
+    </div>
+  </div>
+  <div class="d-flex gap-1">
+    {% if audit.status == 'en_curso' %}
+    <a href="{{ url_for('admin.audits_review', session_id=audit.id) }}" class="btn btn-primary"><i class="bi bi-check2"></i> Revisar hallazgos</a>
+    <button class="btn btn-danger btn-sm" data-cancel-audit><i class="bi bi-ban"></i> Cancelar</button>
+    {% endif %}
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 300px;gap:1.25rem;align-items:start;">
+  <div>
+    <div class="card mb-2">
+      <div class="card-header"><i class="bi bi-clipboard"></i> Información general</div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem 1.5rem;">
+          <div><div class="text-muted text-sm">Capturista</div><div class="fw-bold">{{ audit.auditor.name if audit.auditor else '—' }}</div></div>
+          <div><div class="text-muted text-sm">Inicio</div><div>{{ audit.started_at[:16] if audit.started_at else '—' }}</div></div>
+          <div><div class="text-muted text-sm">Inicio previsto</div><div>{{ audit.planned_start[:16] if audit.planned_start else '—' }}</div></div>
+          <div><div class="text-muted text-sm">Fin previsto</div><div>{{ audit.planned_end[:16] if audit.planned_end else '—' }}</div></div>
+          {% if audit.finished_at %}<div><div class="text-muted text-sm">Finalizada</div><div>{{ audit.finished_at[:16] }}</div></div>{% endif %}
+          {% if audit.cancel_reason %}<div style="grid-column:1/-1;"><div class="text-muted text-sm">Motivo cancelación</div><div class="text-sm">{{ audit.cancel_reason }}</div></div>{% endif %}
+        </div>
+        {% if audit.description %}<div style="margin-top:.75rem;"><div class="text-muted text-sm">Descripción</div><div>{{ audit.description }}</div></div>{% endif %}
+        {% if audit.notes %}<div style="margin-top:.5rem;"><div class="text-muted text-sm">Notas</div><div>{{ audit.notes }}</div></div>{% endif %}
+      </div>
+    </div>
+
+    <!-- Items table -->
+    <div class="card">
+      <div class="card-header"><i class="bi bi-box-seam"></i> Activos auditados ({{ total }})</div>
+      <div class="table-wrapper">
+        {% if audit['items'] %}
+        <table>
+          <thead><tr><th>Activo</th><th>Resultado</th><th>Observación</th><th>Severidad</th><th>Estado revisión</th></tr></thead>
+          <tbody>
+            {% for item in audit['items'] %}
+            <tr>
+              <td>
+                {% if item.asset %}
+                <div class="fw-bold text-sm">{{ item.asset.name }}</div>
+                <div class="text-muted text-sm" style="font-family:monospace;">{{ item.asset.code }}</div>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td>
+                <span class="badge {% if item.result=='presente' %}badge-success{% elif item.result in ('danado','faltante') %}badge-danger{% elif item.result=='reubicado' %}badge-warning{% else %}badge-secondary{% endif %}">
+                  {{ item.result }}
+                </span>
+              </td>
+              <td class="text-sm">{{ item.notes or '—' }}</td>
+              <td>{% if item.severity %}<span class="badge {% if item.severity=='critica' %}badge-danger{% elif item.severity=='alta' %}badge-warning{% else %}badge-secondary{% endif %}">{{ item.severity }}</span>{% else %}—{% endif %}</td>
+              <td>
+                {% if item.approved_at %}
+                  <span class="badge badge-success"><i class="bi bi-check-circle-fill"></i> Aprobado</span>
+                {% elif item.returned_at %}
+                  <span class="badge badge-warning"><i class="bi bi-arrow-return-left"></i> Devuelto</span>
+                {% else %}
+                  <span class="badge badge-secondary"><i class="bi bi-hourglass-split"></i> Pendiente</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state" style="padding:1.5rem;"><div class="empty-desc">No hay activos registrados en esta auditoría aún.</div></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Progress side -->
+  <div>
+    <div class="card mb-2">
+      <div class="card-header"><i class="bi bi-bar-chart-fill"></i> Progreso</div>
+      <div class="card-body">
+        <div style="text-align:center;margin-bottom:1rem;">
+          <div style="font-size:2.5rem;font-weight:800;color:var(--blue-dark);">{{ pct }}%</div>
+          <div class="text-muted text-sm">completado</div>
+        </div>
+        <div style="background:var(--border);border-radius:8px;height:10px;overflow:hidden;margin-bottom:1rem;">
+          <div style="background:var(--blue-mid);height:100%;width:{{ pct }}%;transition:.3s;"></div>
+        </div>
+        <div class="d-flex justify-between text-sm mb-1"><span>Total activos</span><span class="fw-bold">{{ total }}</span></div>
+        <div class="d-flex justify-between text-sm mb-1"><span><i class="bi bi-check-circle-fill"></i> Aprobados</span><span class="fw-bold" style="color:var(--success);">{{ approved }}</span></div>
+        <div class="d-flex justify-between text-sm mb-1"><span><i class="bi bi-arrow-return-left"></i> Devueltos</span><span class="fw-bold" style="color:#D4A017;">{{ returned_pending }}</span></div>
+        <div class="d-flex justify-between text-sm"><span><i class="bi bi-hourglass-split"></i> Pendientes</span><span class="fw-bold">{{ total - approved - returned_pending }}</span></div>
+      </div>
+    </div>
+    {% if audit.status == 'en_curso' %}
+    <form method="POST" action="{{ url_for('admin.audits_finish', session_id=audit.id) }}" data-no-double-submit>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <button type="submit" class="btn btn-success w-100"
+        data-confirm="¿Marcar esta auditoría como completada? Esta acción no se puede deshacer."
+        {% if returned_pending > 0 %}disabled title="Hay ítems devueltos sin corrección"{% endif %}>
+        <i class="bi bi-check-circle-fill"></i> Finalizar auditoría
+      </button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+
+<!-- Cancel modal -->
+{% if audit.status == 'en_curso' %}
+<div class="modal-overlay" id="cancelModal">
+  <div class="modal">
+    <div class="modal-header"><i class="bi bi-ban"></i> Cancelar auditoría<button class="modal-close">✕</button></div>
+    <form method="POST" action="{{ url_for('admin.audits_cancel', session_id=audit.id) }}" data-no-double-submit>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Motivo de cancelación<span class="required">*</span></label>
+          <textarea name="reason" class="form-control" rows="3" required placeholder="Explica por qué se cancela esta auditoría"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('cancelModal')">Volver</button>
+        <button type="submit" class="btn btn-danger">Confirmar cancelación</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endif %}
+{% endblock %}

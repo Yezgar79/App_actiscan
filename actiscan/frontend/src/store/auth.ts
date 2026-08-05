@@ -5,7 +5,7 @@ interface User {
   id: string
   name: string
   email: string
-  role: "admin" | "auditor" | "viewer"
+  role: "super_admin" | "admin" | "auditor" | "viewer"
   assigned_location?: string
 }
 

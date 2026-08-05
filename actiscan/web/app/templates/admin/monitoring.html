@@ -1,0 +1,55 @@
+{% extends "admin/layout.html" %}
+{% block title %}Monitoreo{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-sep">›</span><span>Monitoreo</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1 class="page-title"><i class="bi bi-display"></i> Monitoreo del Sistema</h1><p class="page-subtitle">Estado de servicios y disponibilidad</p></div>
+  <button onclick="location.reload()" class="btn btn-ghost"><i class="bi bi-arrow-repeat"></i> Actualizar</button>
+</div>
+
+<div class="stats-grid" style="margin-bottom:1.5rem;">
+  <div class="stat-card {% if health.status == 'ok' %}stat-success{% else %}stat-danger{% endif %}">
+    <div class="stat-icon">{{ '<i class="bi bi-check-circle-fill"></i>' if health.status == 'ok' else '<i class="bi bi-x-circle-fill"></i>' }}</div>
+    <div class="stat-label">Estado API</div>
+    <div style="font-size:1.2rem;font-weight:700;">{{ health.status|upper }}</div>
+  </div>
+  <div class="stat-card {% if health.database == 'ok' %}stat-success{% else %}stat-danger{% endif %}">
+    <div class="stat-icon">{{ '<i class="bi bi-circle-fill" style="color:#1A7A4A;font-size:.65rem;"></i>' if health.database == 'ok' else '<i class="bi bi-circle-fill" style="color:#9B1C1C;font-size:.65rem;"></i>' }}</div>
+    <div class="stat-label">Base de Datos</div>
+    <div style="font-size:1.2rem;font-weight:700;">{{ (health.database or 'N/D')|upper }}</div>
+  </div>
+  <div class="stat-card stat-info">
+    <div class="stat-icon"><i class="bi bi-box-seam"></i></div>
+    <div class="stat-label">Versión API</div>
+    <div style="font-size:1.2rem;font-weight:700;">{{ health.version or 'N/D' }}</div>
+  </div>
+</div>
+
+{% if health.database == 'error' and health.database_error %}
+<div class="alert alert-danger"><i class="bi bi-x-circle-fill"></i> {{ health.database_error }}</div>
+{% endif %}
+
+<div class="card">
+  <div class="card-header">Información del servicio</div>
+  <div class="card-body">
+    <table style="width:auto;">
+      <tbody>
+        {% for k, v in health.items() %}
+        {% if k != 'database_error' or v %}
+        <tr>
+          <td style="padding:.4rem 1rem .4rem 0;font-weight:600;color:var(--text-muted);text-transform:uppercase;font-size:.75rem;letter-spacing:.5px;white-space:nowrap;">{{ k|replace('_', ' ') }}</td>
+          <td style="padding:.4rem 0;">{{ v or '—' }}</td>
+        </tr>
+        {% endif %}
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+  <div class="card-footer">Última verificación: <strong id="lastCheck"></strong></div>
+</div>
+{% endblock %}
+{% block extra_js %}
+<script>
+document.getElementById('lastCheck').textContent = new Date().toLocaleString('es-MX');
+</script>
+{% endblock %}

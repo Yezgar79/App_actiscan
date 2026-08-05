@@ -1,0 +1,34 @@
+{% extends "admin/layout.html" %}
+{% block title %}Catálogos{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-sep">›</span><span>Catálogos</span>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1 class="page-title"><i class="bi bi-tags"></i> Catálogos — Categorías</h1><p class="page-subtitle">Clasificación de activos</p></div>
+  <div class="d-flex gap-1">
+    <a href="?include_inactive={{ 'false' if include_inactive else 'true' }}" class="btn btn-ghost btn-sm">{{ '<i class="bi bi-eye-slash"></i> Ocultar inactivas' if include_inactive else '<i class="bi bi-eye"></i> Ver inactivas' }}</a>
+    <a href="{{ url_for('admin.categories_new') }}" class="btn btn-primary">+ Nueva categoría</a>
+  </div>
+</div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+<div class="card">
+  <div class="table-wrapper">
+    {% if categories %}
+    <table>
+      <thead><tr><th>Nombre</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>
+        {% for cat in categories %}
+        <tr {% if not cat.is_active %}style="opacity:.55;"{% endif %}>
+          <td class="fw-bold">{{ cat.name }}</td>
+          <td class="text-sm text-muted">{{ cat.description or '—' }}</td>
+          <td><span class="badge {% if cat.is_active %}badge-success{% else %}badge-secondary{% endif %}">{% if cat.is_active %}Activa{% else %}Inactiva{% endif %}</span></td>
+          <td><a href="{{ url_for('admin.categories_edit', cat_id=cat.id) }}" class="btn btn-ghost btn-sm"><i class="bi bi-pencil"></i> Editar</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon"><i class="bi bi-tags"></i></div><div class="empty-title">Sin categorías</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

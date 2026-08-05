@@ -1,0 +1,71 @@
+{% extends "capturista/layout.html" %}
+{% block title %}Mi Perfil{% endblock %}
+{% block page_title %}Mi Perfil{% endblock %}
+{% block content %}
+{% if success %}<div class="alert alert-success"><i class="bi bi-check-circle-fill"></i> {{ success }}</div>{% endif %}
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+<div style="max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:1rem;">
+  <div class="card">
+    <div class="card-body text-center" style="padding:1.5rem;">
+      <div style="width:72px;height:72px;background:var(--blue-pale);border-radius:50%;display:flex;align-items:center;justify-content:center;margin:0 auto .75rem;font-size:1.8rem;color:var(--blue-dark);font-weight:700;">
+        {{ current_user.name[0]|upper if current_user else '?' }}
+      </div>
+      <div class="fw-bold" style="font-size:1.05rem;">{{ current_user.name if current_user else '' }}</div>
+      <div class="text-muted text-sm">{{ current_user.email if current_user else '' }}</div>
+      {% if current_user %}
+      <div style="margin-top:.5rem;">
+        <span class="badge badge-info">{{ {'super_admin':'Super Admin','admin':'Administrador','auditor':'Capturista','viewer':'Visor'}.get(current_user.role, current_user.role) }}</span>
+      </div>
+      {% if current_user.username %}
+      <div class="text-muted text-sm mt-1">Usuario: {{ current_user.username }}</div>
+      {% endif %}
+      {% if current_user.employee_number %}
+      <div class="text-muted text-sm">No. Empleado: {{ current_user.employee_number }}</div>
+      {% endif %}
+      {% if current_user.location %}
+      <div class="text-muted text-sm"><i class="bi bi-geo-alt"></i> {{ current_user.location.name }}</div>
+      {% endif %}
+      {% if current_user.last_login %}
+      <div class="text-muted text-sm">Último acceso: {{ current_user.last_login[:16] }}</div>
+      {% endif %}
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-key"></i> Cambiar contraseña</div>
+    <div class="card-body">
+      <form method="POST" data-no-double-submit>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <div class="form-group">
+          <label class="form-label">Contraseña actual<span class="required">*</span></label>
+          <div class="password-wrapper">
+            <input type="password" name="current_password" class="form-control" required autocomplete="current-password">
+            <button type="button" class="password-toggle"><i class="bi bi-eye"></i></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nueva contraseña<span class="required">*</span></label>
+          <div class="password-wrapper">
+            <input type="password" name="new_password" class="form-control" required autocomplete="new-password" placeholder="Mín. 8 caracteres">
+            <button type="button" class="password-toggle"><i class="bi bi-eye"></i></button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirmar nueva contraseña<span class="required">*</span></label>
+          <div class="password-wrapper">
+            <input type="password" name="confirm_password" class="form-control" required autocomplete="new-password">
+            <button type="button" class="password-toggle"><i class="bi bi-eye"></i></button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Actualizar contraseña</button>
+      </form>
+    </div>
+  </div>
+
+  <div style="text-align:center;">
+    <a href="{{ url_for('auth.logout') }}" class="btn btn-ghost" style="color:var(--danger);"><i class="bi bi-power"></i> Cerrar sesión</a>
+  </div>
+</div>
+{% endblock %}

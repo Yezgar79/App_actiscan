@@ -1,7 +1,15 @@
-export type UserRole = "admin" | "auditor" | "viewer"
+export type UserRole = "super_admin" | "admin" | "auditor" | "viewer"
 export type AssetStatus = "operativo" | "mantenimiento" | "baja" | "no_localizado"
 export type AuditStatus = "en_curso" | "completada" | "cancelada"
-export type AuditItemResult = "presente" | "faltante" | "alerta"
+export type AuditItemResult =
+  | "presente"
+  | "faltante"
+  | "danado"
+  | "reubicado"
+  | "no_accesible"
+  | "no_aplica"
+  | "alerta"
+export type ObservationSeverity = "baja" | "media" | "alta" | "critica"
 
 export interface User {
   id: string
@@ -10,6 +18,7 @@ export interface User {
   role: UserRole
   is_active: boolean
   assigned_location?: string
+  last_login?: string
   created_at: string
 }
 
@@ -60,6 +69,13 @@ export interface AuditItem {
   asset_id: string
   result: AuditItemResult
   notes?: string
+  severity?: ObservationSeverity
+  detected_location?: string
+  detected_responsible?: string
+  evidence_urls?: string[]
+  returned_at?: string
+  returned_comment?: string
+  approved_at?: string
   scanned_at: string
   asset?: Asset
 }
@@ -73,6 +89,20 @@ export interface AuditSession {
   finished_at?: string
   auditor: User
   items: AuditItem[]
+}
+
+export interface SystemStats {
+  total_users: number
+  users_by_role: Record<string, number>
+  active_users: number
+  inactive_users: number
+  total_assets: number
+  assets_by_status: Record<string, number>
+  total_audits: number
+  active_audits: number
+  total_categories: number
+  total_locations: number
+  total_movements: number
 }
 
 export interface DashboardStats {

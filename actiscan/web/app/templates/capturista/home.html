@@ -1,0 +1,75 @@
+{% extends "capturista/layout.html" %}
+{% block title %}Inicio{% endblock %}
+{% block page_title %}Inicio{% endblock %}
+{% block content %}
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+<div style="margin-bottom:1.25rem;">
+  <h2 style="font-size:1.15rem;font-weight:700;color:var(--blue-dark);margin:0 0 .25rem;">Bienvenido, {{ current_user.name.split()[0] if current_user else '' }}</h2>
+  <p class="text-muted text-sm">Aquí está el resumen de tu actividad de auditoría.</p>
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:1rem;margin-bottom:1.5rem;">
+  <div class="stat-card stat-info">
+    <div class="stat-icon"><i class="bi bi-clipboard"></i></div>
+    <div class="stat-value">{{ stats.assigned_audits or 0 }}</div>
+    <div class="stat-label">Asignadas</div>
+  </div>
+  <div class="stat-card stat-warning">
+    <div class="stat-icon"><i class="bi bi-hourglass-split"></i></div>
+    <div class="stat-value">{{ stats.in_progress_audits or 0 }}</div>
+    <div class="stat-label">En curso</div>
+  </div>
+  <div class="stat-card stat-success">
+    <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+    <div class="stat-value">{{ stats.completed_audits or 0 }}</div>
+    <div class="stat-label">Completadas</div>
+  </div>
+  <div class="stat-card" style="background:#eff6ff;border-left:4px solid var(--blue-mid);">
+    <div class="stat-icon"><i class="bi bi-search"></i></div>
+    <div class="stat-value" style="color:var(--blue-dark);">{{ stats.total_items_scanned or 0 }}</div>
+    <div class="stat-label">Activos escaneados</div>
+  </div>
+</div>
+
+{% if my_audits %}
+<div class="card">
+  <div class="card-header" style="display:flex;align-items:center;justify-content:space-between;">
+    <span><i class="bi bi-hourglass-split"></i> Auditorías en curso</span>
+    <a href="{{ url_for('capturista.audits') }}" class="btn btn-ghost" style="font-size:.8rem;padding:.25rem .6rem;">Ver todas</a>
+  </div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Código</th><th>Título</th><th>Ubicación</th><th>Progreso</th><th></th></tr></thead>
+      <tbody>
+        {% for a in my_audits[:5] %}
+        <tr>
+          <td style="font-family:monospace;font-size:.8rem;">{{ a.audit_code or '—' }}</td>
+          <td class="fw-bold text-sm">{{ a.title }}</td>
+          <td class="text-sm text-muted">{{ a.location.name if a.location else '—' }}</td>
+          <td>
+            {% set total = a['items']|length %}
+            {% set done = a['items']|selectattr('status','ne','pendiente')|list|length %}
+            {% set pct = ((done/total)*100)|int if total else 0 %}
+            <div style="display:flex;align-items:center;gap:.5rem;">
+              <div style="flex:1;background:#e5e7eb;border-radius:4px;height:6px;min-width:60px;">
+                <div style="width:{{ pct }}%;background:var(--blue-mid);height:6px;border-radius:4px;transition:width .3s;"></div>
+              </div>
+              <span class="text-sm text-muted">{{ pct }}%</span>
+            </div>
+          </td>
+          <td><a href="{{ url_for('capturista.audit_detail', session_id=a.id) }}" class="btn btn-outline" style="font-size:.8rem;padding:.3rem .7rem;">Ir ›</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="bi bi-stars"></i></div>
+  <div class="empty-title">Sin auditorías pendientes</div>
+  <div class="empty-desc">No tienes auditorías activas en este momento. Cuando se te asigne una aparecerá aquí.</div>
+</div>
+{% endif %}
+{% endblock %}

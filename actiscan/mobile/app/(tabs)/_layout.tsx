@@ -1,16 +1,30 @@
-import { Tabs } from "expo-router"
-import { View, Text } from "react-native"
+import { Tabs, Redirect } from "expo-router"
+import { View } from "react-native"
+import { Ionicons } from "@expo/vector-icons"
 import { Colors } from "@/theme"
+import { useAuthStore } from "@/store/auth"
 
-function TabIcon({ emoji, focused }: { emoji: string; focused: boolean }) {
+type IoniconName = React.ComponentProps<typeof Ionicons>["name"]
+
+function TabIcon({ outline, filled, focused }: { outline: IoniconName; filled: IoniconName; focused: boolean }) {
   return (
-    <View style={{ alignItems: "center" }}>
-      <Text style={{ fontSize: 20, opacity: focused ? 1 : 0.5 }}>{emoji}</Text>
-    </View>
+    <Ionicons
+      name={focused ? filled : outline}
+      size={22}
+      color={focused ? Colors.brand : Colors.textMuted}
+    />
   )
 }
 
 export default function TabsLayout() {
+  const { user, initialized } = useAuthStore()
+  const isAdmin = user?.role === "admin" || user?.role === "super_admin"
+
+  // Si fetchMe ya corrió y no hay usuario válido → token expirado → ir a login
+  if (initialized && !user) {
+    return <Redirect href="/login" />
+  }
+
   return (
     <Tabs
       screenOptions={{
@@ -30,14 +44,18 @@ export default function TabsLayout() {
         name="home"
         options={{
           title: "Inicio",
-          tabBarIcon: ({ focused }) => <TabIcon emoji="🏠" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon outline="home-outline" filled="home" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="inventory"
         options={{
           title: "Inventario",
-          tabBarIcon: ({ focused }) => <TabIcon emoji="📦" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon outline="cube-outline" filled="cube" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
@@ -49,11 +67,14 @@ export default function TabsLayout() {
               width: 52, height: 52, borderRadius: 26,
               backgroundColor: focused ? Colors.brand : Colors.brandMid,
               alignItems: "center", justifyContent: "center",
-              marginBottom: 16, shadowColor: Colors.brand,
-              shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.4,
-              shadowRadius: 8, elevation: 6,
+              marginBottom: 16,
+              shadowColor: Colors.brand,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.4,
+              shadowRadius: 8,
+              elevation: 6,
             }}>
-              <Text style={{ fontSize: 22 }}>📷</Text>
+              <Ionicons name="qr-code" size={24} color={Colors.white} />
             </View>
           ),
         }}
@@ -62,14 +83,28 @@ export default function TabsLayout() {
         name="audits"
         options={{
           title: "Auditorías",
-          tabBarIcon: ({ focused }) => <TabIcon emoji="✅" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon outline="clipboard-outline" filled="clipboard" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="admin"
+        options={{
+          title: "Admin",
+          tabBarButton: isAdmin ? undefined : () => null,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon outline="shield-outline" filled="shield" focused={focused} />
+          ),
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: "Perfil",
-          tabBarIcon: ({ focused }) => <TabIcon emoji="👤" focused={focused} />,
+          tabBarIcon: ({ focused }) => (
+            <TabIcon outline="person-outline" filled="person" focused={focused} />
+          ),
         }}
       />
     </Tabs>

@@ -1,0 +1,108 @@
+{% extends "capturista/layout.html" %}
+{% block title %}{{ audit.title }}{% endblock %}
+{% block page_title %}{{ audit.title }}{% endblock %}
+{% block content %}
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+{% set total = audit['items']|length %}
+{% set done = audit['items']|selectattr('status','ne','pendiente')|list|length %}
+{% set approved = audit['items']|selectattr('status','eq','aprobado')|list|length %}
+{% set returned = audit['items']|selectattr('status','eq','devuelto')|list|length %}
+{% set pct = ((done/total)*100)|int if total else 0 %}
+
+<div style="margin-bottom:1rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+  <div>
+    <div style="display:flex;gap:.5rem;align-items:center;margin-bottom:.4rem;flex-wrap:wrap;">
+      <span class="badge status-{{ audit.status }}">{{ {'assigned':'Asignada','en_curso':'En curso','completada':'Completada','cancelada':'Cancelada','draft':'Borrador'}.get(audit.status, audit.status) }}</span>
+      {% if audit.audit_code %}<span style="font-family:monospace;font-size:.8rem;color:var(--text-muted);">{{ audit.audit_code }}</span>{% endif %}
+    </div>
+    <h2 style="font-size:1.1rem;font-weight:700;margin:0 0 .25rem;color:var(--blue-dark);">{{ audit.title }}</h2>
+    {% if audit.description %}<p class="text-muted text-sm">{{ audit.description }}</p>{% endif %}
+    <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+      {% if audit.location %}<span class="text-sm text-muted"><i class="bi bi-geo-alt"></i> {{ audit.location.name }}</span>{% endif %}
+      {% if audit.started_at %}<span class="text-sm text-muted"><i class="bi bi-calendar"></i> Iniciada: {{ audit.started_at[:10] }}</span>{% endif %}
+    </div>
+  </div>
+  {% if audit.status not in ('cancelada','completada') %}
+  <a href="{{ url_for('capturista.scan', session_id=audit.id) }}" class="btn btn-primary" style="font-size:.95rem;padding:.55rem 1.2rem;"><i class="bi bi-camera"></i> Escanear activo</a>
+  {% endif %}
+</div>
+
+<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:.75rem;margin-bottom:1.25rem;">
+  <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:.75rem;text-align:center;">
+    <div style="font-size:1.3rem;font-weight:700;color:var(--blue-dark);">{{ total }}</div>
+    <div class="text-sm text-muted">Total</div>
+  </div>
+  <div style="background:#fff;border:1px solid var(--border);border-radius:10px;padding:.75rem;text-align:center;">
+    <div style="font-size:1.3rem;font-weight:700;color:var(--text-muted);">{{ total - done }}</div>
+    <div class="text-sm text-muted">Pendientes</div>
+  </div>
+  <div style="background:#d1fae5;border:1px solid #6ee7b7;border-radius:10px;padding:.75rem;text-align:center;">
+    <div style="font-size:1.3rem;font-weight:700;color:var(--success);">{{ approved }}</div>
+    <div class="text-sm text-muted">Aprobados</div>
+  </div>
+  <div style="background:#fff3cd;border:1px solid #fcd34d;border-radius:10px;padding:.75rem;text-align:center;">
+    <div style="font-size:1.3rem;font-weight:700;color:#856404;">{{ returned }}</div>
+    <div class="text-sm text-muted">Devueltos</div>
+  </div>
+</div>
+
+{% if total %}
+<div style="margin-bottom:1.25rem;background:#e5e7eb;border-radius:6px;height:10px;">
+  <div style="width:{{ pct }}%;background:{% if pct==100 %}var(--success){% else %}var(--blue-mid){% endif %};height:10px;border-radius:6px;transition:width .4s;" title="{{ pct }}% completado"></div>
+</div>
+{% endif %}
+
+{% if audit['items'] %}
+<div class="card">
+  <div class="card-header">Activos en esta auditoría</div>
+  <div class="table-wrapper">
+    <table>
+      <thead><tr><th>Activo</th><th>Código</th><th>Estado</th><th>Observaciones</th><th>Acciones</th></tr></thead>
+      <tbody>
+        {% for item in audit['items'] %}
+        <tr>
+          <td class="fw-bold text-sm">{{ item.asset.name if item.asset else '—' }}</td>
+          <td style="font-family:monospace;font-size:.8rem;">{{ item.asset.code if item.asset else '—' }}</td>
+          <td>
+            <span class="badge {% if item.status=='aprobado' %}badge-success{% elif item.status=='devuelto' %}badge-warning{% elif item.status=='pendiente' %}badge-secondary{% else %}badge-info{% endif %}">
+              {{ {'pendiente':'Pendiente','capturado':'Capturado','aprobado':'Aprobado','devuelto':'Devuelto'}.get(item.status, item.status) }}
+            </span>
+          </td>
+          <td class="text-sm">
+            {% if item.observations %}{{ item.observations|truncate(60) }}{% else %}<span class="text-muted">—</span>{% endif %}
+          </td>
+          <td>
+            {% if item.status == 'devuelto' and audit.status not in ('cancelada','completada') %}
+            <a href="{{ url_for('capturista.correct_item', session_id=audit.id, item_id=item.id) }}" class="btn btn-warning" style="font-size:.78rem;padding:.25rem .6rem;"><i class="bi bi-wrench-adjustable"></i> Corregir</a>
+            {% elif item.status == 'pendiente' and audit.status not in ('cancelada','completada') %}
+            <a href="{{ url_for('capturista.scan', session_id=audit.id) }}?asset_id={{ item.asset.id if item.asset else '' }}" class="btn btn-outline" style="font-size:.78rem;padding:.25rem .6rem;"><i class="bi bi-camera"></i> Escanear</a>
+            {% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="bi bi-box-seam"></i></div>
+  <div class="empty-title">Sin activos registrados</div>
+  <div class="empty-desc">Esta auditoría aún no tiene activos. Escanea un código QR para empezar.</div>
+</div>
+{% endif %}
+
+{% if audit.status == 'en_curso' and pct == 100 %}
+<div style="margin-top:1.25rem;padding:1rem;background:#d1fae5;border-radius:10px;border:1px solid #6ee7b7;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.75rem;">
+  <div>
+    <div class="fw-bold" style="color:#065f46;"><i class="bi bi-check-circle-fill"></i> Auditoría completada</div>
+    <div class="text-sm" style="color:#047857;">Todos los activos han sido procesados.</div>
+  </div>
+  <form method="POST" action="{{ url_for('capturista.finish_audit', session_id=audit.id) }}" data-no-double-submit>
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+    <button type="submit" class="btn btn-success" data-confirm="¿Deseas finalizar esta auditoría?">Finalizar auditoría</button>
+  </form>
+</div>
+{% endif %}
+{% endblock %}

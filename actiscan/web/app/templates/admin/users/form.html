@@ -1,0 +1,83 @@
+{% extends "admin/layout.html" %}
+{% block title %}{{ 'Editar' if is_edit else 'Nuevo' }} Usuario{% endblock %}
+{% block breadcrumb %}
+  <span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.users') }}">Usuarios</a>
+  <span class="breadcrumb-sep">›</span><span>{{ 'Editar' if is_edit else 'Nuevo' }}</span>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <h1 class="page-title">{{ '<i class="bi bi-pencil"></i> Editar usuario' if is_edit else '<i class="bi bi-plus-lg"></i> Nuevo usuario' }}</h1>
+</div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+<div class="card" style="max-width:700px;">
+  <div class="card-body">
+    <form method="POST" data-no-double-submit>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Nombre completo<span class="required">*</span></label>
+          <input type="text" name="name" class="form-control" required value="{{ user.name if user else '' }}" placeholder="Nombre y apellidos">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nombre de usuario</label>
+          <input type="text" name="username" class="form-control" value="{{ user.username if user else '' }}" placeholder="usuario_ejemplo">
+          <div class="form-hint">Opcional. Permite iniciar sesión con usuario en lugar de correo.</div>
+        </div>
+      </div>
+      {% if not is_edit %}
+      <div class="form-group">
+        <label class="form-label">Correo electrónico<span class="required">*</span></label>
+        <input type="email" name="email" class="form-control" required placeholder="correo@empresa.mx">
+      </div>
+      {% endif %}
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">No. de empleado</label>
+          <input type="text" name="employee_number" class="form-control" value="{{ user.employee_number if user else '' }}" placeholder="AD-001">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Rol<span class="required">*</span></label>
+          <select name="role" class="form-control" required>
+            <option value="auditor" {% if (user and user.role=='auditor') or not user %}selected{% endif %}>Capturista</option>
+            <option value="viewer" {% if user and user.role=='viewer' %}selected{% endif %}>Visor (solo lectura)</option>
+            {% if current_user and current_user.role == 'super_admin' %}
+            <option value="admin" {% if user and user.role=='admin' %}selected{% endif %}>Administrador</option>
+            <option value="super_admin" {% if user and user.role=='super_admin' %}selected{% endif %}>Super Admin</option>
+            {% endif %}
+          </select>
+        </div>
+      </div>
+      {% if not is_edit %}
+      <div class="form-group">
+        <label class="form-label">Contraseña<span class="required">*</span></label>
+        <div class="password-wrapper">
+          <input type="password" name="password" class="form-control" required placeholder="Mín. 8 caracteres, mayúscula, número y símbolo">
+          <button type="button" class="password-toggle"><i class="bi bi-eye"></i></button>
+        </div>
+        <div class="form-hint">Mínimo 8 caracteres, con mayúscula, minúscula, número y símbolo especial.</div>
+      </div>
+      {% endif %}
+      <div class="form-group">
+        <label class="form-label">Ubicación asignada</label>
+        <select name="assigned_location" class="form-control">
+          <option value="">Sin asignar</option>
+          {% for loc in locations %}
+          <option value="{{ loc.name }}" {% if user and user.assigned_location == loc.name %}selected{% endif %}>{{ loc.name }}</option>
+          {% endfor %}
+        </select>
+      </div>
+      <div class="form-check form-group">
+        <input type="checkbox" name="must_change_password" id="must_change"
+          {% if (user and user.must_change_password) or not is_edit %}checked{% endif %}>
+        <label for="must_change" class="form-label" style="margin:0;">Forzar cambio de contraseña al iniciar sesión</label>
+      </div>
+
+      <div class="d-flex gap-1 mt-2">
+        <button type="submit" class="btn btn-primary">{{ 'Guardar cambios' if is_edit else 'Crear usuario' }}</button>
+        <a href="{{ url_for('admin.users') }}" class="btn btn-ghost">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

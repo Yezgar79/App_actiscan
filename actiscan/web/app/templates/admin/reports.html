@@ -1,0 +1,18 @@
+{% extends "admin/layout.html" %}
+{% block title %}Reportes{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-sep">›</span><span>Reportes</span>{% endblock %}
+{% block content %}
+<div class="page-header"><h1 class="page-title"><i class="bi bi-graph-up"></i> Reportes</h1><p class="page-subtitle">Consulta y exportación de datos</p></div>
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+  <a href="{{ url_for('admin.reports_assets') }}" class="stat-card stat-info" style="padding:2rem;">
+    <div style="font-size:2.5rem;"><i class="bi bi-box-seam"></i></div>
+    <div class="stat-label">Reporte de Activos</div>
+    <div class="text-sm text-muted mt-1">Listado filtrable con exportación CSV</div>
+  </a>
+  <a href="{{ url_for('admin.reports_audits') }}" class="stat-card stat-success" style="padding:2rem;">
+    <div style="font-size:2.5rem;"><i class="bi bi-search"></i></div>
+    <div class="stat-label">Reporte de Auditorías</div>
+    <div class="text-sm text-muted mt-1">Estado y progreso de auditorías</div>
+  </a>
+</div>
+{% endblock %}

@@ -1,0 +1,183 @@
+{% extends "admin/layout.html" %}
+{% block title %}Dashboard{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-sep">›</span> <span>Dashboard</span>{% endblock %}
+
+{% block content %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">Dashboard</h1>
+    <p class="page-subtitle">Resumen general del sistema de activos y auditorías</p>
+  </div>
+</div>
+
+{% if error %}
+<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>
+{% endif %}
+
+<!-- Stats -->
+<div class="stats-grid">
+  <a href="{{ url_for('admin.assets') }}" class="stat-card stat-info">
+    <div class="stat-icon"><i class="bi bi-box-seam"></i></div>
+    <div class="stat-label">Total Activos</div>
+    <div class="stat-value">{{ stats.get('total_assets', 0) }}</div>
+  </a>
+  <a href="{{ url_for('admin.assets', status='operativo') }}" class="stat-card stat-success">
+    <div class="stat-icon"><i class="bi bi-check-circle-fill"></i></div>
+    <div class="stat-label">Operativos</div>
+    <div class="stat-value">{{ stats.get('operativo', 0) }}</div>
+  </a>
+  <a href="{{ url_for('admin.assets', status='mantenimiento') }}" class="stat-card stat-warning">
+    <div class="stat-icon"><i class="bi bi-wrench-adjustable"></i></div>
+    <div class="stat-label">Mantenimiento</div>
+    <div class="stat-value">{{ stats.get('mantenimiento', 0) }}</div>
+  </a>
+  <a href="{{ url_for('admin.assets', status='no_localizado') }}" class="stat-card stat-danger">
+    <div class="stat-icon"><i class="bi bi-question-circle-fill"></i></div>
+    <div class="stat-label">No Localizados</div>
+    <div class="stat-value">{{ stats.get('no_localizado', 0) }}</div>
+  </a>
+  <a href="{{ url_for('admin.assets', status='baja') }}" class="stat-card">
+    <div class="stat-icon"><i class="bi bi-archive"></i></div>
+    <div class="stat-label">De Baja</div>
+    <div class="stat-value">{{ stats.get('baja', 0) }}</div>
+  </a>
+  <a href="{{ url_for('admin.audits', status='en_curso') }}" class="stat-card stat-info">
+    <div class="stat-icon"><i class="bi bi-clipboard-pulse"></i></div>
+    <div class="stat-label">Auditorías Activas</div>
+    <div class="stat-value">{{ stats.get('active_audits', 0) }}</div>
+  </a>
+  <a href="{{ url_for('admin.audits', status='completada') }}" class="stat-card stat-success">
+    <div class="stat-icon"><i class="bi bi-clipboard-check-fill"></i></div>
+    <div class="stat-label">Completadas</div>
+    <div class="stat-value">{{ stats.get('completed_audits', 0) }}</div>
+  </a>
+  <a href="{{ url_for('admin.users') }}" class="stat-card">
+    <div class="stat-icon"><i class="bi bi-people-fill"></i></div>
+    <div class="stat-label">Usuarios Activos</div>
+    <div class="stat-value">{{ stats.get('active_users', 0) }}</div>
+  </a>
+</div>
+
+<!-- Charts + Recent -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;margin-bottom:1.25rem;">
+  <!-- Asset status chart -->
+  <div class="card">
+    <div class="card-header"><i class="bi bi-pie-chart-fill"></i> Estado de Activos</div>
+    <div class="card-body" style="padding:1rem;">
+      <div class="chart-container" style="height:220px;">
+        <canvas id="assetStatusChart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- Audit status chart -->
+  <div class="card">
+    <div class="card-header"><i class="bi bi-bar-chart-fill"></i> Estado de Auditorías</div>
+    <div class="card-body" style="padding:1rem;">
+      <div class="chart-container" style="height:220px;">
+        <canvas id="auditStatusChart"></canvas>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Recent audits + logs side by side -->
+<div style="display:grid;grid-template-columns:1fr 1fr;gap:1.25rem;">
+  <div class="card">
+    <div class="card-header">
+      <i class="bi bi-clipboard-check"></i> Auditorías Recientes
+      <a href="{{ url_for('admin.audits') }}" class="btn btn-ghost btn-sm">Ver todas</a>
+    </div>
+    <div class="table-wrapper">
+      {% if recent_audits %}
+      <table>
+        <thead><tr><th>Código</th><th>Título</th><th>Estado</th><th>Capturista</th></tr></thead>
+        <tbody>
+          {% for a in recent_audits %}
+          <tr>
+            <td><a href="{{ url_for('admin.audits_detail', session_id=a.id) }}" class="text-sm fw-bold">{{ a.audit_code or a.id[:8] }}</a></td>
+            <td class="text-sm">{{ a.title|truncate(30) }}</td>
+            <td><span class="badge status-{{ a.status }}">{{ a.status }}</span></td>
+            <td class="text-sm">{{ a.auditor.name if a.auditor else '—' }}</td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      {% else %}
+      <div class="empty-state"><div class="empty-icon"><i class="bi bi-clipboard-x"></i></div><div class="empty-desc">Sin auditorías aún</div></div>
+      {% endif %}
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header">
+      <i class="bi bi-journal-text"></i> Actividad Reciente
+      <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-ghost btn-sm">Ver bitácora</a>
+    </div>
+    <div style="padding:.5rem 0;">
+      {% if recent_logs %}
+        {% for log in recent_logs %}
+        <div style="padding:.6rem 1.25rem;border-bottom:1px solid var(--border);font-size:.82rem;">
+          <div class="d-flex justify-between">
+            <span class="fw-bold">{{ log.module | capitalize }}</span>
+            <span class="text-muted">{{ log.created_at[:16] if log.created_at else '' }}</span>
+          </div>
+          <div class="text-muted">{{ log.description|truncate(60) }}</div>
+        </div>
+        {% endfor %}
+      {% else %}
+      <div class="empty-state" style="padding:1.5rem;"><div class="empty-desc">Sin actividad registrada</div></div>
+      {% endif %}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const statsData = {{ stats | tojson }};
+
+// Asset status donut
+new Chart(document.getElementById('assetStatusChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Operativo', 'Mantenimiento', 'Baja', 'No localizado'],
+    datasets: [{
+      data: [
+        statsData.operativo || 0,
+        statsData.mantenimiento || 0,
+        statsData.baja || 0,
+        statsData.no_localizado || 0,
+      ],
+      backgroundColor: ['#1A7A4A', '#D4A017', '#6B7280', '#9B1C1C'],
+      borderWidth: 2, borderColor: '#fff',
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { position: 'bottom', labels: { font: { size: 11 } } } },
+    cutout: '65%',
+  }
+});
+
+// Audit status bar
+new Chart(document.getElementById('auditStatusChart'), {
+  type: 'bar',
+  data: {
+    labels: ['En curso', 'Completadas', 'Total'],
+    datasets: [{
+      label: 'Auditorías',
+      data: [statsData.active_audits || 0, statsData.completed_audits || 0, statsData.total_audits || 0],
+      backgroundColor: ['#2563A8', '#1A7A4A', '#6B7280'],
+      borderRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    plugins: { legend: { display: false } },
+    scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } },
+  }
+});
+</script>
+{% endblock %}

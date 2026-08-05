@@ -1,0 +1,60 @@
+{% extends "capturista/layout.html" %}
+{% block title %}Corregir Activo{% endblock %}
+{% block page_title %}Corregir Activo Devuelto{% endblock %}
+{% block content %}
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+<div style="max-width:560px;margin:0 auto;">
+  {% if item %}
+  <div class="card" style="margin-bottom:1rem;border-left:4px solid #D4A017;background:#fffbeb;">
+    <div class="card-header"><i class="bi bi-exclamation-triangle-fill"></i> Activo devuelto para corrección</div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem;">
+        <div><span class="text-sm text-muted">Activo</span><div class="fw-bold">{{ item.asset.name if item.asset else '—' }}</div></div>
+        <div><span class="text-sm text-muted">Código</span><div style="font-family:monospace;font-size:.85rem;">{{ item.asset.code if item.asset else '—' }}</div></div>
+        {% if item.notes %}
+        <div style="grid-column:1/-1;"><span class="text-sm text-muted">Observaciones previas</span><div class="text-sm">{{ item.notes }}</div></div>
+        {% endif %}
+        {% if item.returned_at %}
+        <div style="grid-column:1/-1;"><span class="text-sm text-muted">Devuelto el</span><div class="text-sm">{{ item.returned_at[:16] }}</div></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+  {% endif %}
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-wrench-adjustable"></i> Enviar corrección</div>
+    <div class="card-body">
+      <p class="text-sm text-muted" style="margin-bottom:1rem;">Describe las correcciones realizadas o el estado actual del activo. El administrador revisará y aprobará.</p>
+      <form method="POST" data-no-double-submit>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        {% if item %}
+        <div class="form-group">
+          <label class="form-label">Resultado<span class="required">*</span></label>
+          <select name="result" class="form-control" required>
+            <option value="">Selecciona...</option>
+            <option value="localizado">Localizado</option>
+            <option value="no_localizado">No localizado</option>
+            <option value="con_observaciones">Con observaciones</option>
+          </select>
+        </div>
+        {% endif %}
+        <div class="form-group">
+          <label class="form-label">Notas de corrección</label>
+          <textarea name="notes" class="form-control" rows="4"
+            placeholder="Describe qué se corrigió, el estado actual del activo, o cualquier aclaración pertinente...">{{ item.notes if item else '' }}</textarea>
+        </div>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+          <button type="submit" class="btn btn-primary">Enviar corrección</button>
+          {% if audit %}
+          <a href="{{ url_for('capturista.audit_detail', session_id=audit.id) }}" class="btn btn-ghost">Cancelar</a>
+          {% else %}
+          <a href="{{ url_for('capturista.returned') }}" class="btn btn-ghost">Cancelar</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

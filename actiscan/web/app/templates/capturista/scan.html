@@ -1,0 +1,120 @@
+{% extends "capturista/layout.html" %}
+{% block title %}Escanear Activo{% endblock %}
+{% block page_title %}Escanear Activo{% endblock %}
+{% block content %}
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+<div style="max-width:620px;margin:0 auto;">
+  {% if audit %}
+  <div style="margin-bottom:1rem;padding:.6rem .9rem;background:var(--blue-pale);border-radius:8px;font-size:.85rem;color:var(--blue-dark);">
+    <i class="bi bi-clipboard"></i> <strong>{{ audit.audit_code or '' }}</strong> — {{ audit.title }}
+    {% if audit.location %} · <i class="bi bi-geo-alt"></i> {{ audit.location.name }}{% endif %}
+  </div>
+  {% endif %}
+
+  {% if not asset %}
+  <!-- Step 1: lookup asset by code -->
+  <div class="card" style="margin-bottom:1rem;">
+    <div class="card-header"><i class="bi bi-camera"></i> Buscar activo por código</div>
+    <div class="card-body">
+      <p class="text-sm text-muted" style="margin-bottom:1rem;">Ingresa el código del activo (del QR o etiqueta) para localizarlo antes de registrar su resultado.</p>
+      <form method="GET" id="lookupForm">
+        <div class="form-group" style="display:flex;gap:.5rem;align-items:flex-end;">
+          <div style="flex:1;">
+            <label class="form-label">Código del activo<span class="required">*</span></label>
+            <input type="text" name="code" class="form-control" required autofocus
+              value="{{ request.args.get('code', '') }}"
+              placeholder="Ej: ACT-20240101-0001"
+              autocomplete="off" autocorrect="off"
+              style="font-family:monospace;font-size:1rem;letter-spacing:.5px;">
+          </div>
+          <button type="submit" class="btn btn-primary" style="white-space:nowrap;"><i class="bi bi-search"></i> Buscar</button>
+        </div>
+      </form>
+      {% if all_assets %}
+      <div style="margin-top:1rem;border-top:1px solid var(--border);padding-top:.75rem;">
+        <div class="form-label text-sm" style="margin-bottom:.35rem;">O selecciona de la lista de esta auditoría:</div>
+        <form method="GET">
+          <div style="display:flex;gap:.5rem;align-items:center;">
+            <select name="asset_id" class="form-control" style="flex:1;">
+              <option value="">— Seleccionar activo —</option>
+              {% for a in all_assets %}
+              <option value="{{ a.id }}" {% if asset_id == a.id %}selected{% endif %}>{{ a.name }} ({{ a.code }})</option>
+              {% endfor %}
+            </select>
+            <button type="submit" class="btn btn-outline" style="white-space:nowrap;">Ir</button>
+          </div>
+        </form>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+  {% else %}
+  <!-- Step 2: register result for found asset -->
+  <div class="card" style="margin-bottom:1rem;border-left:4px solid var(--blue-mid);">
+    <div class="card-header"><i class="bi bi-box-seam"></i> Activo encontrado</div>
+    <div class="card-body">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:.5rem .75rem;margin-bottom:.5rem;">
+        <div><span class="text-sm text-muted">Nombre</span><div class="fw-bold">{{ asset.name }}</div></div>
+        <div><span class="text-sm text-muted">Código</span><div style="font-family:monospace;font-size:.85rem;">{{ asset.code }}</div></div>
+        {% if asset.brand %}<div><span class="text-sm text-muted">Marca</span><div class="text-sm">{{ asset.brand }}</div></div>{% endif %}
+        {% if asset.model %}<div><span class="text-sm text-muted">Modelo</span><div class="text-sm">{{ asset.model }}</div></div>{% endif %}
+        {% if asset.serial_number %}<div><span class="text-sm text-muted">No. Serie</span><div style="font-family:monospace;font-size:.8rem;">{{ asset.serial_number }}</div></div>{% endif %}
+        <div><span class="text-sm text-muted">Estado registrado</span><div><span class="badge status-{{ asset.status }}">{{ asset.status }}</span></div></div>
+        {% if asset.location %}<div><span class="text-sm text-muted">Ubicación registrada</span><div class="text-sm">{{ asset.location.name }}</div></div>{% endif %}
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-header"><i class="bi bi-check-circle-fill"></i> Registrar resultado</div>
+    <div class="card-body">
+      <form method="POST" data-no-double-submit>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+        <input type="hidden" name="asset_id" value="{{ asset.id }}">
+        <div class="form-group">
+          <label class="form-label">Resultado<span class="required">*</span></label>
+          <select name="result" class="form-control" required>
+            <option value="">Selecciona...</option>
+            <option value="localizado">Localizado — Encontrado en su lugar</option>
+            <option value="no_localizado">No localizado — No se encontró</option>
+            <option value="con_observaciones">Con observaciones — Requiere atención</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Notas / Observaciones</label>
+          <textarea name="notes" class="form-control" rows="3"
+            placeholder="Condición, daños visibles, comentarios de campo..."></textarea>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Severidad (si aplica)</label>
+          <select name="severity" class="form-control">
+            <option value="">Sin severidad</option>
+            <option value="baja">Baja</option>
+            <option value="media">Media</option>
+            <option value="alta">Alta</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Ubicación detectada (si difiere)</label>
+          <input type="text" name="detected_location" class="form-control" placeholder="Ej: Bodega 3, Piso 2...">
+        </div>
+        <div style="display:flex;gap:.75rem;flex-wrap:wrap;">
+          <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle-fill"></i> Registrar resultado</button>
+          <a href="?code=" class="btn btn-ghost"><i class="bi bi-search"></i> Buscar otro</a>
+          {% if audit %}
+          <a href="{{ url_for('capturista.audit_detail', session_id=audit.id) }}" class="btn btn-ghost">← Volver</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+  </div>
+  {% endif %}
+
+  {% if audit %}
+  <div style="margin-top:.75rem;text-align:center;">
+    <a href="{{ url_for('capturista.audit_detail', session_id=audit.id) }}" class="btn btn-ghost text-sm">← Ver todos los activos de esta auditoría</a>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

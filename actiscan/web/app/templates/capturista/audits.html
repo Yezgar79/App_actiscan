@@ -1,0 +1,79 @@
+{% extends "capturista/layout.html" %}
+{% block title %}Mis Auditorías{% endblock %}
+{% block page_title %}Mis Auditorías{% endblock %}
+{% block content %}
+<div style="margin-bottom:1.25rem;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:.5rem;">
+  <div>
+    <h2 style="font-size:1.15rem;font-weight:700;color:var(--blue-dark);margin:0 0 .1rem;">Mis Auditorías</h2>
+    <p class="text-muted text-sm">Listado de todas las auditorías asignadas a ti.</p>
+  </div>
+</div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+<form method="GET" class="filters-bar" style="margin-bottom:1rem;">
+  <select name="status" class="form-control">
+    <option value="">Todos los estados</option>
+    <option value="assigned" {% if status=='assigned' %}selected{% endif %}>Asignada</option>
+    <option value="en_curso" {% if status=='en_curso' %}selected{% endif %}>En curso</option>
+    <option value="completada" {% if status=='completada' %}selected{% endif %}>Completada</option>
+    <option value="cancelada" {% if status=='cancelada' %}selected{% endif %}>Cancelada</option>
+  </select>
+  <button type="submit" class="btn btn-outline"><i class="bi bi-search"></i> Filtrar</button>
+  <a href="{{ url_for('capturista.audits') }}" class="btn btn-ghost">✕ Limpiar</a>
+</form>
+
+{% if audits %}
+<div style="display:flex;flex-direction:column;gap:.75rem;">
+  {% for a in audits %}
+  {% set total = a['items']|length %}
+  {% set done = a['items']|selectattr('status','ne','pendiente')|list|length %}
+  {% set pct = ((done/total)*100)|int if total else 0 %}
+  <div class="card" style="padding:1rem 1.25rem;">
+    <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+      <div style="flex:1;min-width:200px;">
+        <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;flex-wrap:wrap;">
+          <span class="badge status-{{ a.status }}">{{ {'assigned':'Asignada','en_curso':'En curso','completada':'Completada','cancelada':'Cancelada','draft':'Borrador'}.get(a.status, a.status) }}</span>
+          {% if a.audit_code %}
+          <span style="font-family:monospace;font-size:.75rem;color:var(--text-muted);">{{ a.audit_code }}</span>
+          {% endif %}
+        </div>
+        <div class="fw-bold" style="font-size:.95rem;margin-bottom:.25rem;">{{ a.title }}</div>
+        {% if a.description %}
+        <div class="text-sm text-muted" style="margin-bottom:.4rem;">{{ a.description|truncate(100) }}</div>
+        {% endif %}
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;">
+          {% if a.location %}
+          <span class="text-sm text-muted"><i class="bi bi-geo-alt"></i> {{ a.location.name }}</span>
+          {% endif %}
+          {% if a.started_at %}
+          <span class="text-sm text-muted"><i class="bi bi-calendar"></i> {{ a.started_at[:10] }}</span>
+          {% endif %}
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;align-items:flex-end;gap:.5rem;min-width:120px;">
+        {% if a.status not in ('cancelada','completada') %}
+        <a href="{{ url_for('capturista.audit_detail', session_id=a.id) }}" class="btn btn-primary" style="font-size:.85rem;">Continuar ›</a>
+        {% else %}
+        <a href="{{ url_for('capturista.audit_detail', session_id=a.id) }}" class="btn btn-ghost" style="font-size:.85rem;">Ver detalle</a>
+        {% endif %}
+        {% if total %}
+        <div style="text-align:right;font-size:.75rem;color:var(--text-muted);">{{ done }}/{{ total }} activos ({{ pct }}%)</div>
+        {% endif %}
+      </div>
+    </div>
+    {% if total %}
+    <div style="margin-top:.75rem;background:#e5e7eb;border-radius:4px;height:6px;">
+      <div style="width:{{ pct }}%;background:{% if pct==100 %}var(--success){% else %}var(--blue-mid){% endif %};height:6px;border-radius:4px;transition:width .3s;"></div>
+    </div>
+    {% endif %}
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="bi bi-clipboard"></i></div>
+  <div class="empty-title">Sin auditorías</div>
+  <div class="empty-desc">No tienes auditorías asignadas{% if status %} con el estado "{{ status }}"{% endif %}.</div>
+</div>
+{% endif %}
+{% endblock %}

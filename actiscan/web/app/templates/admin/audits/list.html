@@ -1,0 +1,78 @@
+{% extends "admin/layout.html" %}
+{% block title %}Auditorías{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.audits') }}">Auditorías</a>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1 class="page-title"><i class="bi bi-search"></i> Auditorías</h1><p class="page-subtitle">Gestión y seguimiento de auditorías de activos</p></div>
+  <a href="{{ url_for('admin.audits_new') }}" class="btn btn-primary">+ Nueva auditoría</a>
+</div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+<form method="GET" class="filters-bar">
+  <select name="status" class="form-control">
+    <option value="">Todos los estados</option>
+    <option value="en_curso" {% if status=='en_curso' %}selected{% endif %}>En curso</option>
+    <option value="completada" {% if status=='completada' %}selected{% endif %}>Completada</option>
+    <option value="cancelada" {% if status=='cancelada' %}selected{% endif %}>Cancelada</option>
+  </select>
+  <select name="auditor_id" class="form-control">
+    <option value="">Todos los capturistas</option>
+    {% for u in users %}
+    <option value="{{ u.id }}" {% if auditor_id==u.id %}selected{% endif %}>{{ u.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="location_id" class="form-control">
+    <option value="">Todas las ubicaciones</option>
+    {% for loc in locations %}
+    <option value="{{ loc.id }}" {% if location_id==loc.id %}selected{% endif %}>{{ loc.name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-outline"><i class="bi bi-search"></i> Filtrar</button>
+  <a href="{{ url_for('admin.audits') }}" class="btn btn-ghost">✕ Limpiar</a>
+</form>
+
+<div class="card">
+  <div class="table-wrapper">
+    {% if audits %}
+    <table>
+      <thead><tr><th>Código</th><th>Título</th><th>Estado</th><th>Capturista</th><th>Progreso</th><th>Inicio</th><th>Acciones</th></tr></thead>
+      <tbody>
+        {% for a in audits %}
+        {% set total = a['items']|length %}
+        {% set approved = a['items']|selectattr('approved_at')|list|length %}
+        {% set returned = a['items']|selectattr('returned_at')|selectattr('approved_at', 'none')|list|length %}
+        {% set pct = ((approved / total * 100)|int) if total > 0 else 0 %}
+        <tr>
+          <td><span class="fw-bold text-sm" style="font-family:monospace;">{{ a.audit_code or a.id[:8] }}</span></td>
+          <td><a href="{{ url_for('admin.audits_detail', session_id=a.id) }}" class="fw-bold">{{ a.title|truncate(35) }}</a></td>
+          <td><span class="badge status-{{ a.status }}">{{ {'en_curso':'En curso','completada':'Completada','cancelada':'Cancelada'}.get(a.status, a.status) }}</span></td>
+          <td class="text-sm">{{ a.auditor.name if a.auditor else '—' }}</td>
+          <td>
+            {% if total > 0 %}
+            <div style="font-size:.75rem;color:var(--text-muted);margin-bottom:.2rem;">{{ approved }}/{{ total }} aprobados{% if returned %} · {{ returned }} devueltos{% endif %}</div>
+            <div style="background:var(--border);border-radius:4px;height:6px;width:100px;overflow:hidden;">
+              <div style="background:var(--blue-mid);height:100%;width:{{ pct }}%;"></div>
+            </div>
+            {% else %}
+            <span class="text-muted text-sm">Sin activos</span>
+            {% endif %}
+          </td>
+          <td class="text-sm text-muted">{{ a.started_at[:10] if a.started_at else '—' }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{{ url_for('admin.audits_detail', session_id=a.id) }}" class="btn btn-ghost btn-sm"><i class="bi bi-eye"></i></a>
+              {% if a.status == 'en_curso' %}
+              <a href="{{ url_for('admin.audits_review', session_id=a.id) }}" class="btn btn-outline btn-sm"><i class="bi bi-check2"></i> Revisar</a>
+              {% endif %}
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon"><i class="bi bi-search"></i></div><div class="empty-title">Sin auditorías</div><div class="empty-desc">Crea la primera auditoría.</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

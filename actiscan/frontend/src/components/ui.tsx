@@ -1,4 +1,5 @@
-import { ReactNode } from "react"
+import { ReactNode, forwardRef } from "react"
+import { IconInbox } from "@/components/icons"
 import { clsx } from "clsx"
 import { AssetStatus, AuditItemResult, AuditStatus } from "@/types"
 
@@ -50,25 +51,38 @@ interface InputProps extends React.InputHTMLAttributes<HTMLInputElement> {
   label?: string
   error?: string
   helperText?: string
+  suffix?: React.ReactNode
 }
 
-export function Input({ label, error, helperText, className, ...props }: InputProps) {
-  return (
-    <div className="flex flex-col gap-1">
-      {label && <label className="text-sm font-medium text-gray-700">{label}</label>}
-      <input
-        className={clsx(
-          "w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition",
-          error ? "border-red-400 bg-red-50" : "border-gray-300 bg-white",
-          className
-        )}
-        {...props}
-      />
-      {error && <p className="text-xs text-red-600">{error}</p>}
-      {helperText && !error && <p className="text-xs text-gray-500">{helperText}</p>}
-    </div>
-  )
-}
+export const Input = forwardRef<HTMLInputElement, InputProps>(
+  ({ label, error, helperText, className, suffix, ...props }, ref) => {
+    return (
+      <div className="flex flex-col gap-1">
+        {label && <label className="text-sm font-medium text-gray-700">{label}</label>}
+        <div className="relative">
+          <input
+            ref={ref}
+            className={clsx(
+              "w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition",
+              error ? "border-red-400 bg-red-50" : "border-gray-300 bg-white",
+              suffix ? "pr-10" : "",
+              className
+            )}
+            {...props}
+          />
+          {suffix && (
+            <div className="absolute inset-y-0 right-0 flex items-center pr-3">
+              {suffix}
+            </div>
+          )}
+        </div>
+        {error && <p className="text-xs text-red-600">{error}</p>}
+        {helperText && !error && <p className="text-xs text-gray-500">{helperText}</p>}
+      </div>
+    )
+  }
+)
+Input.displayName = "Input"
 
 // ─── Select ───────────────────────────────────────────────────────────────────
 interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
@@ -77,27 +91,31 @@ interface SelectProps extends React.SelectHTMLAttributes<HTMLSelectElement> {
   options: { value: string; label: string }[]
 }
 
-export function Select({ label, error, options, className, ...props }: SelectProps) {
-  return (
-    <div className="flex flex-col gap-1">
-      {label && <label className="text-sm font-medium text-gray-700">{label}</label>}
-      <select
-        className={clsx(
-          "w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white transition",
-          error ? "border-red-400" : "border-gray-300",
-          className
-        )}
-        {...props}
-      >
-        <option value="">Seleccionar...</option>
-        {options.map((o) => (
-          <option key={o.value} value={o.value}>{o.label}</option>
-        ))}
-      </select>
-      {error && <p className="text-xs text-red-600">{error}</p>}
-    </div>
-  )
-}
+export const Select = forwardRef<HTMLSelectElement, SelectProps>(
+  ({ label, error, options, className, ...props }, ref) => {
+    return (
+      <div className="flex flex-col gap-1">
+        {label && <label className="text-sm font-medium text-gray-700">{label}</label>}
+        <select
+          ref={ref}
+          className={clsx(
+            "w-full px-3 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 bg-white transition",
+            error ? "border-red-400" : "border-gray-300",
+            className
+          )}
+          {...props}
+        >
+          <option value="">Seleccionar...</option>
+          {options.map((o) => (
+            <option key={o.value} value={o.value}>{o.label}</option>
+          ))}
+        </select>
+        {error && <p className="text-xs text-red-600">{error}</p>}
+      </div>
+    )
+  }
+)
+Select.displayName = "Select"
 
 // ─── Badge ────────────────────────────────────────────────────────────────────
 const STATUS_ASSET: Record<AssetStatus, { label: string; cls: string }> = {
@@ -114,9 +132,13 @@ const STATUS_AUDIT: Record<AuditStatus, { label: string; cls: string }> = {
 }
 
 const RESULT_AUDIT: Record<AuditItemResult, { label: string; cls: string }> = {
-  presente: { label: "Presente", cls: "bg-green-100 text-green-800" },
-  faltante: { label: "Faltante", cls: "bg-red-100 text-red-800"     },
-  alerta:   { label: "Alerta",   cls: "bg-amber-100 text-amber-800" },
+  presente:     { label: "Encontrado",   cls: "bg-green-100 text-green-800"   },
+  faltante:     { label: "No encontrado",cls: "bg-red-100 text-red-800"       },
+  danado:       { label: "Dañado",       cls: "bg-orange-100 text-orange-800" },
+  reubicado:    { label: "Reubicado",    cls: "bg-blue-100 text-blue-800"     },
+  no_accesible: { label: "No accesible", cls: "bg-purple-100 text-purple-800" },
+  no_aplica:    { label: "No aplica",    cls: "bg-gray-100 text-gray-600"     },
+  alerta:       { label: "Alerta",       cls: "bg-amber-100 text-amber-800"   },
 }
 
 export function AssetStatusBadge({ status }: { status: AssetStatus }) {
@@ -165,7 +187,7 @@ export function EmptyState({ title, description }: { title: string; description?
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       <div className="w-14 h-14 bg-gray-100 rounded-full flex items-center justify-center mb-4">
-        <span className="text-2xl">📦</span>
+        <IconInbox size={26} className="text-gray-400" />
       </div>
       <p className="text-gray-700 font-medium">{title}</p>
       {description && <p className="text-gray-400 text-sm mt-1">{description}</p>}
@@ -182,13 +204,13 @@ export function Spinner({ className }: { className?: string }) {
 
 // ─── Modal ────────────────────────────────────────────────────────────────────
 export function Modal({
-  open, onClose, title, children,
-}: { open: boolean; onClose: () => void; title: string; children: ReactNode }) {
+  open, onClose, title, children, wide,
+}: { open: boolean; onClose: () => void; title: string; children: ReactNode; wide?: boolean }) {
   if (!open) return null
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="absolute inset-0 bg-black/40" onClick={onClose} />
-      <div className="relative bg-white rounded-2xl shadow-xl w-full max-w-md mx-4 p-6 z-10">
+      <div className={clsx("relative bg-white rounded-2xl shadow-xl w-full mx-4 p-6 z-10", wide ? "max-w-2xl" : "max-w-md")}>
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">×</button>

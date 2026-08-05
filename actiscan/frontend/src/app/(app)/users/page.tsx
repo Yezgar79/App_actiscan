@@ -1,15 +1,47 @@
 "use client"
+import { useState } from "react"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import toast from "react-hot-toast"
 import api from "@/lib/api"
 import { User } from "@/types"
-import { Button, Card, Spinner, EmptyState } from "@/components/ui"
+import { Button, Card, Spinner, EmptyState, Input, Select, Modal } from "@/components/ui"
 import { format } from "date-fns"
 import { es } from "date-fns/locale"
-import { ShieldCheck, UserX, UserCheck } from "lucide-react"
+import { UserX, UserCheck, Plus } from "lucide-react"
+
+const createUserSchema = z.object({
+  name:              z.string().min(2, "Mínimo 2 caracteres"),
+  email:             z.string().email("Correo inválido"),
+  password:          z.string()
+    .min(8, "Mínimo 8 caracteres")
+    .regex(/[A-Z]/, "Debe incluir al menos una mayúscula")
+    .regex(/[a-z]/, "Debe incluir al menos una minúscula")
+    .regex(/\d/, "Debe incluir al menos un número")
+    .regex(/[!@#$%^&*(),.?":{}|<>_\-]/, "Debe incluir al menos un carácter especial"),
+  role:              z.enum(["auditor", "viewer"]),
+  assigned_location: z.string().optional(),
+})
+type CreateUserForm = z.infer<typeof createUserSchema>
+
+const ROLE_BADGE: Record<string, string> = {
+  super_admin: "bg-amber-100 text-amber-800",
+  admin:       "bg-purple-100 text-purple-800",
+  auditor:     "bg-blue-100 text-blue-800",
+  viewer:      "bg-gray-100 text-gray-600",
+}
+
+const ROLES = [
+  { value: "auditor", label: "Auditor" },
+  { value: "viewer",  label: "Viewer" },
+]
 
 export default function UsersPage() {
   const qc = useQueryClient()
+  const [createOpen, setCreateOpen] = useState(false)
+
   const { data: users, isLoading } = useQuery<User[]>({
     queryKey: ["users"],
     queryFn: () => api.get("/api/users").then((r) => r.data),
@@ -24,17 +56,16 @@ export default function UsersPage() {
     },
   })
 
-  const ROLE_BADGE: Record<string, string> = {
-    admin:   "bg-purple-100 text-purple-800",
-    auditor: "bg-blue-100 text-blue-800",
-    viewer:  "bg-gray-100 text-gray-600",
-  }
-
   return (
     <div>
-      <div className="page-header">
-        <h1>Usuarios</h1>
-        <p>Gestión de accesos al sistema</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Usuarios</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Gestión de accesos al sistema</p>
+        </div>
+        <Button onClick={() => setCreateOpen(true)}>
+          <Plus size={15} /> Nuevo usuario
+        </Button>
       </div>
 
       <Card className="overflow-hidden p-0">
@@ -101,15 +132,76 @@ export default function UsersPage() {
         )}
       </Card>
 
-      <div className="mt-4 p-4 bg-blue-50 border border-blue-100 rounded-xl flex items-start gap-3">
-        <ShieldCheck size={18} className="text-blue-600 flex-shrink-0 mt-0.5" />
-        <div>
-          <p className="text-sm font-medium text-blue-800">Registro de nuevos usuarios</p>
-          <p className="text-xs text-blue-600 mt-0.5">
-            Los usuarios se registran vía <code className="bg-blue-100 px-1 rounded">POST /api/auth/register</code>. Solo admins pueden cambiar roles y estados.
-          </p>
-        </div>
-      </div>
+      <CreateUserModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        onCreated={() => {
+          qc.invalidateQueries({ queryKey: ["users"] })
+          setCreateOpen(false)
+        }}
+      />
     </div>
+  )
+}
+
+function CreateUserModal({
+  open,
+  onClose,
+  onCreated,
+}: {
+  open: boolean
+  onClose: () => void
+  onCreated: () => void
+}) {
+  const { register, handleSubmit, reset, formState: { errors } } = useForm<CreateUserForm>({
+    resolver: zodResolver(createUserSchema),
+    defaultValues: { role: "auditor" },
+  })
+
+  const mutation = useMutation({
+    mutationFn: (data: CreateUserForm) =>
+      api.post("/api/users", {
+        ...data,
+        assigned_location: data.assigned_location || undefined,
+      }).then((r) => r.data),
+    onSuccess: () => {
+      reset()
+      toast.success("Usuario creado correctamente")
+      onCreated()
+    },
+    onError: (e: any) =>
+      toast.error(e?.response?.data?.detail ?? "Error al crear usuario"),
+  })
+
+  const close = () => { reset(); onClose() }
+
+  return (
+    <Modal open={open} onClose={close} title="Crear nuevo usuario">
+      <form
+        onSubmit={handleSubmit((d) => mutation.mutate(d))}
+        className="space-y-4"
+      >
+        <Input label="Nombre completo *" error={errors.name?.message} {...register("name")} />
+        <Input label="Email *" type="email" error={errors.email?.message} {...register("email")} />
+        <Input
+          label="Contraseña *"
+          type="password"
+          error={errors.password?.message}
+          helperText="Mín. 8 caracteres, incluir mayúscula, minúscula, número y símbolo"
+          {...register("password")}
+        />
+        <Select label="Rol *" error={errors.role?.message} {...register("role")} options={ROLES} />
+        <Input label="Sede asignada (opcional)" {...register("assigned_location")} />
+        <p className="text-xs text-gray-400">
+          Para crear usuarios con rol <strong>Admin</strong> o <strong>Super Admin</strong>, usa el Panel de Control.
+        </p>
+        <div className="flex gap-3 justify-end pt-2">
+          <Button type="button" variant="secondary" onClick={close}>Cancelar</Button>
+          <Button type="submit" loading={mutation.isPending}>
+            <Plus size={14} /> Crear usuario
+          </Button>
+        </div>
+      </form>
+    </Modal>
   )
 }

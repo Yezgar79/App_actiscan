@@ -1,0 +1,38 @@
+{% extends "admin/layout.html" %}
+{% block title %}Ubicaciones{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.locations') }}">Ubicaciones</a>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1 class="page-title"><i class="bi bi-geo-alt"></i> Ubicaciones</h1><p class="page-subtitle">Sedes, edificios, pisos y áreas</p></div>
+  <div class="d-flex gap-1">
+    <a href="?include_inactive={{ 'false' if include_inactive else 'true' }}" class="btn btn-ghost btn-sm">
+      {{ '<i class="bi bi-eye-slash"></i> Ocultar inactivas' if include_inactive else '<i class="bi bi-eye"></i> Ver inactivas' }}
+    </a>
+    <a href="{{ url_for('admin.locations_new') }}" class="btn btn-primary">+ Nueva ubicación</a>
+  </div>
+</div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+<div class="card">
+  <div class="table-wrapper">
+    {% if locations %}
+    <table>
+      <thead><tr><th>Nombre</th><th>Edificio</th><th>Piso / Nivel</th><th>Descripción</th><th>Estado</th><th>Acciones</th></tr></thead>
+      <tbody>
+        {% for loc in locations %}
+        <tr {% if not loc.is_active %}style="opacity:.55;"{% endif %}>
+          <td class="fw-bold">{{ loc.name }}</td>
+          <td>{{ loc.building or '—' }}</td>
+          <td>{{ loc.floor or '—' }}</td>
+          <td class="text-sm text-muted">{{ loc.description or '—' }}</td>
+          <td><span class="badge {% if loc.is_active %}badge-success{% else %}badge-secondary{% endif %}">{% if loc.is_active %}Activa{% else %}Inactiva{% endif %}</span></td>
+          <td><a href="{{ url_for('admin.locations_edit', loc_id=loc.id) }}" class="btn btn-ghost btn-sm"><i class="bi bi-pencil"></i> Editar</a></td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon"><i class="bi bi-geo-alt"></i></div><div class="empty-title">Sin ubicaciones</div><div class="empty-desc">Crea la primera ubicación.</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

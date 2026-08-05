@@ -1,0 +1,88 @@
+{% extends "admin/layout.html" %}
+{% block title %}Usuarios{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.users') }}">Usuarios</a>{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1 class="page-title"><i class="bi bi-people"></i> Usuarios</h1><p class="page-subtitle">Gestión de cuentas y accesos</p></div>
+  <a href="{{ url_for('admin.users_new') }}" class="btn btn-primary">+ Nuevo usuario</a>
+</div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+<form method="GET" class="filters-bar">
+  <input type="text" name="search" class="form-control" placeholder="Buscar nombre, correo, usuario…" value="{{ search }}">
+  <select name="role" class="form-control">
+    <option value="">Todos los roles</option>
+    <option value="super_admin" {% if role=='super_admin' %}selected{% endif %}>Super Admin</option>
+    <option value="admin" {% if role=='admin' %}selected{% endif %}>Administrador</option>
+    <option value="auditor" {% if role=='auditor' %}selected{% endif %}>Capturista</option>
+    <option value="viewer" {% if role=='viewer' %}selected{% endif %}>Visor</option>
+  </select>
+  <select name="is_active" class="form-control">
+    <option value="">Todos los estados</option>
+    <option value="true" {% if is_active=='true' %}selected{% endif %}>Activos</option>
+    <option value="false" {% if is_active=='false' %}selected{% endif %}>Inactivos</option>
+  </select>
+  <button type="submit" class="btn btn-outline"><i class="bi bi-search"></i> Filtrar</button>
+  <a href="{{ url_for('admin.users') }}" class="btn btn-ghost">✕ Limpiar</a>
+</form>
+
+<div class="card">
+  <div class="table-wrapper">
+    {% if users %}
+    <table>
+      <thead><tr><th>Nombre</th><th>Usuario / Correo</th><th>No. Empleado</th><th>Rol</th><th>Estado</th><th>Último acceso</th><th>Acciones</th></tr></thead>
+      <tbody>
+        {% for u in users %}
+        <tr>
+          <td class="fw-bold">{{ u.name }}</td>
+          <td>
+            <div class="text-sm">{{ u.username or '—' }}</div>
+            <div class="text-muted text-sm">{{ u.email }}</div>
+          </td>
+          <td class="text-sm">{{ u.employee_number or '—' }}</td>
+          <td>
+            <span class="badge {% if u.role == 'super_admin' %}badge-dark{% elif u.role == 'admin' %}badge-info{% elif u.role == 'auditor' %}badge-secondary{% else %}badge-secondary{% endif %}">
+              {{ {'super_admin':'Super Admin','admin':'Admin','auditor':'Capturista','viewer':'Visor'}.get(u.role, u.role) }}
+            </span>
+          </td>
+          <td>
+            <span class="badge {% if u.is_active %}badge-success{% else %}badge-danger{% endif %}">
+              {% if u.is_active %}Activo{% else %}Inactivo{% endif %}
+            </span>
+            {% if u.must_change_password %}<span class="badge badge-warning" title="Debe cambiar contraseña"><i class="bi bi-key"></i></span>{% endif %}
+            {% if u.locked_until %}<span class="badge badge-danger" title="Cuenta bloqueada"><i class="bi bi-lock-fill"></i></span>{% endif %}
+          </td>
+          <td class="text-sm text-muted">{{ u.last_login[:16] if u.last_login else 'Nunca' }}</td>
+          <td>
+            <div class="d-flex gap-1">
+              <a href="{{ url_for('admin.users_edit', user_id=u.id) }}" class="btn btn-ghost btn-sm"><i class="bi bi-pencil"></i></a>
+              <a href="{{ url_for('admin.users_reset_password', user_id=u.id) }}" class="btn btn-ghost btn-sm" title="Restablecer contraseña"><i class="bi bi-key"></i></a>
+              <form method="POST" action="{{ url_for('admin.users_toggle_active', user_id=u.id) }}" style="display:inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-ghost btn-sm"
+                  data-confirm="¿{{ 'Desactivar' if u.is_active else 'Activar' }} a {{ u.name }}?"
+                  title="{{ 'Desactivar' if u.is_active else 'Activar' }}">
+                  {% if u.is_active %}<i class="bi bi-ban"></i>{% else %}<i class="bi bi-check-circle-fill"></i>{% endif %}
+                </button>
+              </form>
+            </div>
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon"><i class="bi bi-people"></i></div><div class="empty-title">Sin usuarios</div><div class="empty-desc">No hay usuarios que coincidan con los filtros.</div></div>
+    {% endif %}
+  </div>
+  {% if users|length == limit %}
+  <div class="card-footer">
+    <div class="pagination">
+      {% if page > 1 %}<a href="?page={{ page-1 }}&search={{ search }}&role={{ role }}&is_active={{ is_active }}">‹ Anterior</a>{% endif %}
+      <span class="current">{{ page }}</span>
+      <a href="?page={{ page+1 }}&search={{ search }}&role={{ role }}&is_active={{ is_active }}">Siguiente ›</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

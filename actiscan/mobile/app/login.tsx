@@ -8,6 +8,7 @@ import { SafeAreaView } from "react-native-safe-area-context"
 import { useForm, Controller } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
+import { Ionicons } from "@expo/vector-icons"
 import { useAuthStore } from "@/store/auth"
 import { Input, Button } from "@/components/ui"
 import { Colors, Spacing, Radius, FontSize } from "@/theme"
@@ -22,6 +23,7 @@ type FormData = z.infer<typeof schema>
 export default function LoginScreen() {
   const router = useRouter()
   const { login, loading } = useAuthStore()
+  const [showPassword, setShowPassword] = useState(false)
   const { control, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
@@ -30,8 +32,14 @@ export default function LoginScreen() {
     try {
       await login(data.email, data.password)
       router.replace("/(tabs)/home")
-    } catch {
-      Alert.alert("Error de acceso", "Correo o contraseña incorrectos")
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail
+      const status = err?.response?.status
+      if (status === 403 && detail?.includes("bloqueada")) {
+        Alert.alert("Cuenta bloqueada", detail)
+      } else {
+        Alert.alert("Error de acceso", detail ?? "Correo o contraseña incorrectos")
+      }
     }
   }
 
@@ -42,7 +50,7 @@ export default function LoginScreen() {
           {/* Header */}
           <View style={styles.header}>
             <View style={styles.logoBox}>
-              <Text style={styles.logoIcon}>📦</Text>
+              <Ionicons name="cube" size={36} color={Colors.white} />
             </View>
             <Text style={styles.title}>ActiScan</Text>
             <Text style={styles.subtitle}>Gestión de activos con QR</Text>
@@ -73,10 +81,19 @@ export default function LoginScreen() {
                 <Input
                   label="Contraseña"
                   placeholder="••••••••"
-                  secureTextEntry
+                  secureTextEntry={!showPassword}
                   value={value}
                   onChangeText={onChange}
                   error={errors.password?.message}
+                  rightElement={
+                    <TouchableOpacity onPress={() => setShowPassword((v) => !v)} activeOpacity={0.7}>
+                      <Ionicons
+                        name={showPassword ? "eye-off-outline" : "eye-outline"}
+                        size={20}
+                        color={Colors.textMuted}
+                      />
+                    </TouchableOpacity>
+                  }
                 />
               )}
             />
@@ -87,7 +104,8 @@ export default function LoginScreen() {
               style={{ marginTop: Spacing.sm }}
             />
             <View style={styles.securityNote}>
-              <Text style={styles.securityText}>🔒 Sesión protegida con JWT y SSL</Text>
+              <Ionicons name="lock-closed-outline" size={12} color={Colors.textMuted} />
+              <Text style={styles.securityText}>Sesión protegida con JWT y SSL</Text>
             </View>
           </View>
         </ScrollView>
@@ -104,7 +122,6 @@ const styles = StyleSheet.create({
     width: 72, height: 72, backgroundColor: "rgba(255,255,255,0.15)",
     borderRadius: Radius.xl, alignItems: "center", justifyContent: "center", marginBottom: Spacing.lg,
   },
-  logoIcon:   { fontSize: 32 },
   title:      { fontSize: FontSize.xxl, fontWeight: "700", color: Colors.white, marginBottom: 4 },
   subtitle:   { fontSize: FontSize.sm, color: "rgba(255,255,255,0.6)" },
   form:       {
@@ -113,6 +130,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 5,
   },
   formTitle:    { fontSize: FontSize.lg, fontWeight: "600", color: Colors.textPrimary, marginBottom: Spacing.lg },
-  securityNote: { alignItems: "center", marginTop: Spacing.lg },
+  securityNote: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: Spacing.lg },
   securityText: { fontSize: FontSize.xs, color: Colors.textMuted },
 })

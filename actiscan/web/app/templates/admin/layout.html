@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+{% block body %}
+<div id="sidebarOverlay" style="display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.4);" class=""></div>
+<div class="layout">
+
+  <!-- Sidebar -->
+  <aside class="sidebar" id="sidebar" role="navigation" aria-label="Menú principal">
+    <div class="sidebar-logo">
+      <div class="logo-icon">A</div>
+      <span>ActiScan</span>
+    </div>
+
+    {% if current_user %}
+    <div class="sidebar-user">
+      <div class="user-name">{{ current_user.name }}</div>
+      <div class="user-role">
+        {% if current_user.role == 'super_admin' %}Super Admin
+        {% elif current_user.role == 'admin' %}Administrador
+        {% else %}{{ current_user.role }}{% endif %}
+      </div>
+      {% if current_user.employee_number %}
+      <div style="font-size:.75rem;opacity:.7;margin-top:.2rem;">No. {{ current_user.employee_number }}</div>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <nav class="sidebar-nav">
+      <div class="nav-section">Principal</div>
+      <a href="{{ url_for('admin.dashboard') }}"><i class="bi bi-speedometer2 nav-icon"></i> Dashboard</a>
+
+      <div class="nav-section">Organización</div>
+      <a href="{{ url_for('admin.users') }}"><i class="bi bi-people nav-icon"></i> Usuarios</a>
+      <a href="{{ url_for('admin.locations') }}"><i class="bi bi-geo-alt nav-icon"></i> Ubicaciones</a>
+      <a href="{{ url_for('admin.categories') }}"><i class="bi bi-tags nav-icon"></i> Catálogos</a>
+
+      <div class="nav-section">Inventario</div>
+      <a href="{{ url_for('admin.assets') }}"><i class="bi bi-box-seam nav-icon"></i> Activos</a>
+
+      <div class="nav-section">Auditorías</div>
+      <a href="{{ url_for('admin.audits') }}"><i class="bi bi-clipboard-check nav-icon"></i> Auditorías</a>
+
+      <div class="nav-section">Análisis</div>
+      <a href="{{ url_for('admin.reports') }}"><i class="bi bi-bar-chart-line nav-icon"></i> Reportes</a>
+      <a href="{{ url_for('admin.audit_logs') }}"><i class="bi bi-journal-text nav-icon"></i> Bitácora</a>
+      <a href="{{ url_for('admin.monitoring') }}"><i class="bi bi-activity nav-icon"></i> Monitoreo</a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <a href="{{ url_for('admin.profile') }}"><i class="bi bi-person-circle"></i> Mi perfil</a>
+      <a href="{{ url_for('auth.logout') }}" data-confirm="¿Cerrar sesión?"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</a>
+    </div>
+  </aside>
+
+  <!-- Main -->
+  <div class="main-content">
+    <header class="topbar">
+      <button class="topbar-hamburger" id="hamburger" aria-label="Abrir menú"><i class="bi bi-list"></i></button>
+      <nav class="breadcrumb" aria-label="Ruta de navegación">
+        <a href="{{ url_for('admin.dashboard') }}">Inicio</a>
+        {% block breadcrumb %}{% endblock %}
+      </nav>
+      <div class="topbar-actions">
+        <a href="{{ url_for('admin.profile') }}" class="btn btn-ghost btn-sm"><i class="bi bi-person-circle"></i> {{ current_user.name.split()[0] if current_user else 'Perfil' }}</a>
+      </div>
+    </header>
+
+    <main class="page-content" id="main-content">
+      {% block content %}{% endblock %}
+    </main>
+  </div>
+</div>
+{% endblock %}

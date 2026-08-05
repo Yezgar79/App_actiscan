@@ -1,0 +1,62 @@
+{% extends "admin/layout.html" %}
+{% block title %}Reporte de Activos{% endblock %}
+{% block breadcrumb %}
+  <span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.reports') }}">Reportes</a>
+  <span class="breadcrumb-sep">›</span><span>Activos</span>
+{% endblock %}
+{% block content %}
+<div class="page-header">
+  <div><h1 class="page-title"><i class="bi bi-box-seam"></i> Reporte de Activos</h1></div>
+  <a href="{{ url_for('admin.reports_assets_export', **filters) }}" class="btn btn-success"><i class="bi bi-download"></i> Exportar CSV</a>
+</div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+<form method="GET" class="filters-bar">
+  <select name="status" class="form-control">
+    <option value="">Todos los estados</option>
+    {% for s in ['operativo','mantenimiento','baja','no_localizado'] %}
+    <option value="{{ s }}" {% if filters.get('status')==s %}selected{% endif %}>{{ s|capitalize }}</option>
+    {% endfor %}
+  </select>
+  <select name="category_id" class="form-control">
+    <option value="">Todas las categorías</option>
+    {% for cat in categories %}
+    <option value="{{ cat.id }}" {% if filters.get('category_id')==cat.id %}selected{% endif %}>{{ cat.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="location_id" class="form-control">
+    <option value="">Todas las ubicaciones</option>
+    {% for loc in locations %}
+    <option value="{{ loc.id }}" {% if filters.get('location_id')==loc.id %}selected{% endif %}>{{ loc.name }}</option>
+    {% endfor %}
+  </select>
+  <button type="submit" class="btn btn-outline"><i class="bi bi-search"></i> Filtrar</button>
+  <a href="{{ url_for('admin.reports_assets') }}" class="btn btn-ghost">✕ Limpiar</a>
+</form>
+<div class="card">
+  <div class="card-header">{{ rows|length }} activos encontrados</div>
+  <div class="table-wrapper">
+    {% if rows %}
+    <table>
+      <thead><tr><th>Código</th><th>Nombre</th><th>Estado</th><th>Categoría</th><th>Ubicación</th><th>Responsable</th><th>Marca/Modelo</th><th>No. Serie</th><th>Valor</th></tr></thead>
+      <tbody>
+        {% for r in rows %}
+        <tr>
+          <td style="font-family:monospace;font-size:.8rem;">{{ r.code }}</td>
+          <td class="fw-bold text-sm">{{ r.name }}</td>
+          <td><span class="badge status-{{ r.status }}">{{ r.status }}</span></td>
+          <td class="text-sm">{{ r.category or '—' }}</td>
+          <td class="text-sm">{{ r.location or '—' }}</td>
+          <td class="text-sm">{{ r.responsible or '—' }}</td>
+          <td class="text-sm">{{ (r.brand or '') + (' ' + r.model if r.model else '') or '—' }}</td>
+          <td class="text-sm" style="font-family:monospace;">{{ r.serial_number or '—' }}</td>
+          <td class="text-sm">${{ '{:,.2f}'.format(r.acquisition_value) if r.acquisition_value else '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon"><i class="bi bi-box-seam"></i></div><div class="empty-desc">Sin activos con los filtros aplicados.</div></div>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,107 @@
+{% extends "admin/layout.html" %}
+{% block title %}Revisar — {{ audit.audit_code if audit else '' }}{% endblock %}
+{% block breadcrumb %}
+  <span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.audits') }}">Auditorías</a>
+  <span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.audits_detail', session_id=audit.id) if audit else '#' }}">{{ audit.audit_code if audit else '' }}</a>
+  <span class="breadcrumb-sep">›</span><span>Revisión</span>
+{% endblock %}
+{% block content %}
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+{% if audit %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title"><i class="bi bi-check2"></i> Revisión de auditoría</h1>
+    <p class="page-subtitle">{{ audit.title }} · {{ audit.audit_code }}</p>
+  </div>
+  <a href="{{ url_for('admin.audits_detail', session_id=audit.id) }}" class="btn btn-ghost">← Volver al detalle</a>
+</div>
+
+<div class="alert alert-info" style="margin-bottom:1rem;">
+  <strong>Instrucciones:</strong> Revisa cada activo capturado. Puedes <strong>Aprobar</strong> el resultado o <strong>Devolver</strong> al capturista con un comentario obligatorio.
+  No puedes aprobar ítems devueltos pendientes de corrección.
+</div>
+
+{% for item in audit['items'] %}
+{% set asset = item.asset %}
+<div class="card mb-2" style="{% if item.approved_at %}border-left:4px solid var(--success);{% elif item.returned_at %}border-left:4px solid #D4A017;{% else %}border-left:4px solid var(--blue-mid);{% endif %}">
+  <div class="card-body">
+    <div style="display:grid;grid-template-columns:1fr auto;gap:1rem;align-items:start;">
+      <div>
+        <div class="d-flex gap-1 align-center mb-1">
+          <span class="fw-bold">{{ asset.name if asset else 'Activo desconocido' }}</span>
+          {% if asset %}<span class="badge badge-secondary" style="font-family:monospace;font-size:.7rem;">{{ asset.code }}</span>{% endif %}
+        </div>
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:.5rem 1rem;font-size:.82rem;">
+          <div><span class="text-muted">Resultado:</span>
+            <span class="badge {% if item.result=='presente' %}badge-success{% elif item.result in ('danado','faltante') %}badge-danger{% elif item.result=='reubicado' %}badge-warning{% else %}badge-secondary{% endif %}">{{ item.result }}</span>
+          </div>
+          {% if item.severity %}<div><span class="text-muted">Severidad:</span> <span class="badge {% if item.severity=='critica' %}badge-danger{% elif item.severity=='alta' %}badge-warning{% else %}badge-secondary{% endif %}">{{ item.severity }}</span></div>{% endif %}
+          <div><span class="text-muted">Capturado:</span> {{ item.scanned_at[:16] if item.scanned_at else '—' }}</div>
+          {% if item.notes %}<div style="grid-column:1/-1;"><span class="text-muted">Observación:</span> {{ item.notes }}</div>{% endif %}
+          {% if item.detected_location %}<div><span class="text-muted">Ubicación detectada:</span> {{ item.detected_location }}</div>{% endif %}
+          {% if item.returned_comment %}<div style="grid-column:1/-1;color:var(--warning);"><span class="text-muted">Comentario devolución:</span> {{ item.returned_comment }}</div>{% endif %}
+        </div>
+      </div>
+
+      <div style="min-width:160px;">
+        {% if item.approved_at %}
+          <span class="badge badge-success" style="font-size:.82rem;"><i class="bi bi-check-circle-fill"></i> Aprobado {{ item.approved_at[:10] }}</span>
+        {% elif item.returned_at %}
+          <span class="badge badge-warning" style="font-size:.82rem;"><i class="bi bi-arrow-return-left"></i> Devuelto — esperando corrección</span>
+        {% else %}
+          <div class="d-flex gap-1" style="flex-direction:column;">
+            <!-- Approve -->
+            <form method="POST" action="{{ url_for('admin.audits_approve_item', session_id=audit.id, item_id=item.id) }}" data-no-double-submit>
+              <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+              <button type="submit" class="btn btn-success btn-sm w-100"
+                data-confirm="¿Aprobar este resultado?"><i class="bi bi-check-circle-fill"></i> Aprobar</button>
+            </form>
+            <!-- Return -->
+            <button type="button" class="btn btn-warning btn-sm w-100"
+              data-return-item="{{ item.id }}"><i class="bi bi-arrow-return-left"></i> Devolver</button>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% else %}
+<div class="empty-state"><div class="empty-icon"><i class="bi bi-box-seam"></i></div><div class="empty-title">Sin activos capturados</div><div class="empty-desc">El capturista aún no ha registrado ningún activo en esta auditoría.</div></div>
+{% endfor %}
+
+<!-- Return modal (shared, updated via JS) -->
+<div class="modal-overlay" id="returnModal">
+  <div class="modal">
+    <div class="modal-header"><i class="bi bi-arrow-return-left"></i> Devolver ítem para corrección<button class="modal-close">✕</button></div>
+    <form method="POST" id="returnForm" action="#" data-no-double-submit>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="modal-body">
+        <div class="form-group">
+          <label class="form-label">Comentario para el capturista<span class="required">*</span></label>
+          <textarea name="comment" class="form-control" rows="4" required
+            placeholder="Explica qué debe corregir el capturista…"></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('returnModal')">Cancelar</button>
+        <button type="submit" class="btn btn-warning"><i class="bi bi-arrow-return-left"></i> Enviar devolución</button>
+      </div>
+    </form>
+  </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Set return form action dynamically
+document.querySelectorAll("[data-return-item]").forEach(btn => {
+  btn.addEventListener("click", function() {
+    const itemId = this.dataset.returnItem;
+    const form = document.getElementById("returnForm");
+    form.action = "{{ url_for('admin.audits_return_item', session_id=audit.id if audit else '', item_id='ITEM_ID') }}".replace("ITEM_ID", itemId);
+    openModal("returnModal");
+  });
+});
+</script>
+{% endblock %}

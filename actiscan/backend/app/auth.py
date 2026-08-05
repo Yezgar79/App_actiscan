@@ -61,6 +61,12 @@ def get_current_user(
     db: Session = Depends(get_db),
 ) -> models.User:
     payload = decode_token(token)
+    if payload.get("type") != "access":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Token inválido: se requiere access token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     user_id: str = payload.get("sub")
     if not user_id:
         raise HTTPException(status_code=401, detail="Token inválido")
@@ -71,6 +77,12 @@ def get_current_user(
 
 
 def require_admin(current_user: models.User = Depends(get_current_user)) -> models.User:
-    if current_user.role != models.UserRole.admin:
+    if current_user.role not in (models.UserRole.admin, models.UserRole.super_admin):
         raise HTTPException(status_code=403, detail="Se requiere rol administrador")
+    return current_user
+
+
+def require_super_admin(current_user: models.User = Depends(get_current_user)) -> models.User:
+    if current_user.role != models.UserRole.super_admin:
+        raise HTTPException(status_code=403, detail="Se requiere rol super administrador")
     return current_user

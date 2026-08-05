@@ -1,0 +1,69 @@
+{% extends "admin/layout.html" %}
+{% block title %}Bitácora{% endblock %}
+{% block breadcrumb %}<span class="breadcrumb-sep">›</span><span>Bitácora</span>{% endblock %}
+{% block content %}
+<div class="page-header"><h1 class="page-title"><i class="bi bi-clipboard"></i> Bitácora del Sistema</h1><p class="page-subtitle">Registro de acciones críticas (solo lectura)</p></div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+<form method="GET" class="filters-bar">
+  <select name="module" class="form-control">
+    <option value="">Todos los módulos</option>
+    {% for m in ['auth','usuarios','activos','auditorias','ubicaciones','catalogos'] %}
+    <option value="{{ m }}" {% if module==m %}selected{% endif %}>{{ m|capitalize }}</option>
+    {% endfor %}
+  </select>
+  <select name="action" class="form-control">
+    <option value="">Todas las acciones</option>
+    {% for a in ['crear','editar','eliminar','activar','desactivar','login','logout','aprobar','devolver','cancelar','restablecer','exportar'] %}
+    <option value="{{ a }}" {% if action==a %}selected{% endif %}>{{ a|capitalize }}</option>
+    {% endfor %}
+  </select>
+  <select name="user_id" class="form-control">
+    <option value="">Todos los usuarios</option>
+    {% for u in users %}
+    <option value="{{ u.id }}" {% if user_id==u.id %}selected{% endif %}>{{ u.name }}</option>
+    {% endfor %}
+  </select>
+  <input type="date" name="date_from" class="form-control" value="{{ date_from }}" placeholder="Desde">
+  <input type="date" name="date_to" class="form-control" value="{{ date_to }}" placeholder="Hasta">
+  <button type="submit" class="btn btn-outline"><i class="bi bi-search"></i> Filtrar</button>
+  <a href="{{ url_for('admin.audit_logs') }}" class="btn btn-ghost">✕ Limpiar</a>
+</form>
+
+<div class="card">
+  <div class="table-wrapper">
+    {% if logs %}
+    <table>
+      <thead><tr><th>Fecha/Hora</th><th>Usuario</th><th>Módulo</th><th>Acción</th><th>Descripción</th><th>IP</th></tr></thead>
+      <tbody>
+        {% for log in logs %}
+        <tr>
+          <td class="text-sm text-muted" style="white-space:nowrap;">{{ log.created_at[:19] if log.created_at else '—' }}</td>
+          <td class="text-sm">{{ log.user.name if log.user else '—' }}</td>
+          <td><span class="badge badge-secondary">{{ log.module }}</span></td>
+          <td>
+            <span class="badge {% if log.action in ('crear','activar','aprobar') %}badge-success{% elif log.action in ('eliminar','desactivar','cancelar') %}badge-danger{% elif log.action in ('login','logout') %}badge-info{% else %}badge-secondary{% endif %}">
+              {{ log.action }}
+            </span>
+          </td>
+          <td class="text-sm">{{ log.description }}</td>
+          <td class="text-sm text-muted" style="font-family:monospace;">{{ log.ip_address or '—' }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state"><div class="empty-icon"><i class="bi bi-clipboard"></i></div><div class="empty-title">Sin registros</div><div class="empty-desc">No hay entradas en la bitácora con los filtros aplicados.</div></div>
+    {% endif %}
+  </div>
+  {% if logs|length == limit %}
+  <div class="card-footer">
+    <div class="pagination">
+      {% if page > 1 %}<a href="?page={{ page-1 }}&module={{ module }}&action={{ action }}&user_id={{ user_id }}&date_from={{ date_from }}&date_to={{ date_to }}">‹ Anterior</a>{% endif %}
+      <span class="current">{{ page }}</span>
+      <a href="?page={{ page+1 }}&module={{ module }}&action={{ action }}&user_id={{ user_id }}&date_from={{ date_from }}&date_to={{ date_to }}">Siguiente ›</a>
+    </div>
+  </div>
+  {% endif %}
+</div>
+{% endblock %}

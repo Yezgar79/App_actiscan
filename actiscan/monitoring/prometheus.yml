@@ -1,0 +1,42 @@
+global:
+  scrape_interval:     15s
+  evaluation_interval: 15s
+  external_labels:
+    monitor: 'actiscan-monitor'
+
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets: []
+
+rule_files: []
+
+scrape_configs:
+  # ── Backend instancia 1 ──────────────────────────────────────────────────────
+  - job_name: 'actiscan-backend-1'
+    static_configs:
+      - targets: ['backend:8000']
+    metrics_path: '/metrics'
+    scheme: http
+
+  # ── Backend instancia 2 ──────────────────────────────────────────────────────
+  - job_name: 'actiscan-backend-2'
+    static_configs:
+      - targets: ['backend2:8000']
+    metrics_path: '/metrics'
+    scheme: http
+
+  # ── Prometheus mismo ─────────────────────────────────────────────────────────
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+
+  # ── Node Exporter: métricas del sistema (CPU, RAM, disco) ───────────────────
+  - job_name: 'node'
+    static_configs:
+      - targets: ['node_exporter:9100']
+
+  # ── Nginx Exporter: métricas del balanceador de carga ───────────────────────
+  - job_name: 'nginx'
+    static_configs:
+      - targets: ['nginx_exporter:9113']

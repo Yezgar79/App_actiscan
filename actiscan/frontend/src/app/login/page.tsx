@@ -1,4 +1,5 @@
 "use client"
+import { useState } from "react"
 import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import { z } from "zod"
@@ -6,7 +7,7 @@ import { useRouter } from "next/navigation"
 import toast from "react-hot-toast"
 import { useAuthStore } from "@/store/auth"
 import { Input, Button } from "@/components/ui"
-import { QrCode, ShieldCheck } from "lucide-react"
+import { QrCode, ShieldCheck, Eye, EyeOff } from "lucide-react"
 
 const schema = z.object({
   email: z.string().email("Correo inválido"),
@@ -18,6 +19,7 @@ type FormData = z.infer<typeof schema>
 export default function LoginPage() {
   const router = useRouter()
   const { login, loading } = useAuthStore()
+  const [showPassword, setShowPassword] = useState(false)
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
   })
@@ -27,8 +29,9 @@ export default function LoginPage() {
       await login(data.email, data.password)
       toast.success("Bienvenido a ActiScan")
       router.push("/dashboard")
-    } catch {
-      toast.error("Correo o contraseña incorrectos")
+    } catch (err: any) {
+      const detail = err?.response?.data?.detail
+      toast.error(detail ?? "Correo o contraseña incorrectos")
     }
   }
 
@@ -78,9 +81,20 @@ export default function LoginPage() {
             />
             <Input
               label="Contraseña"
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="••••••••"
               error={errors.password?.message}
+              suffix={
+                <button
+                  type="button"
+                  onClick={() => setShowPassword((v) => !v)}
+                  className="text-gray-400 hover:text-gray-600 focus:outline-none"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Ocultar contraseña" : "Mostrar contraseña"}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              }
               {...register("password")}
             />
             <Button type="submit" loading={loading} className="w-full justify-center" size="lg">

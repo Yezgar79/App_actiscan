@@ -1,0 +1,100 @@
+{% extends "admin/layout.html" %}
+{% block title %}{{ asset.name if asset else 'Activo' }}{% endblock %}
+{% block breadcrumb %}
+  <span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.assets') }}">Activos</a>
+  <span class="breadcrumb-sep">›</span><span>{{ asset.code if asset else '' }}</span>
+{% endblock %}
+{% block content %}
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+{% if asset %}
+<div class="page-header">
+  <div>
+    <h1 class="page-title">{{ asset.name }}</h1>
+    <div class="d-flex gap-1 align-center mt-1">
+      <span class="badge badge-dark" style="font-family:monospace;font-size:.85rem;">{{ asset.code }}</span>
+      <span class="badge status-{{ asset.status }}">{{ {'operativo':'Operativo','mantenimiento':'Mantenimiento','baja':'Baja','no_localizado':'No localizado'}.get(asset.status, asset.status) }}</span>
+    </div>
+  </div>
+  <div class="d-flex gap-1">
+    <a href="{{ url_for('admin.assets_edit', asset_id=asset.id) }}" class="btn btn-primary"><i class="bi bi-pencil"></i> Editar</a>
+  </div>
+</div>
+
+<div style="display:grid;grid-template-columns:1fr 340px;gap:1.25rem;align-items:start;">
+  <div>
+    <div class="card mb-2">
+      <div class="card-header"><i class="bi bi-clipboard"></i> Información del activo</div>
+      <div class="card-body">
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:.75rem 1.5rem;">
+          <div><div class="text-muted text-sm">Categoría</div><div>{{ asset.category.name if asset.category else '—' }}</div></div>
+          <div><div class="text-muted text-sm">Estado</div><div><span class="badge status-{{ asset.status }}">{{ asset.status }}</span></div></div>
+          <div><div class="text-muted text-sm">Marca</div><div>{{ asset.brand or '—' }}</div></div>
+          <div><div class="text-muted text-sm">Modelo</div><div>{{ asset.model or '—' }}</div></div>
+          <div><div class="text-muted text-sm">Número de serie</div><div style="font-family:monospace;">{{ asset.serial_number or '—' }}</div></div>
+          <div><div class="text-muted text-sm">No. inventario</div><div>{{ asset.inventory_number or '—' }}</div></div>
+          <div><div class="text-muted text-sm">Fecha adquisición</div><div>{{ asset.acquisition_date[:10] if asset.acquisition_date else '—' }}</div></div>
+          <div><div class="text-muted text-sm">Valor adquisición</div><div>{{ '${:,.2f}'.format(asset.acquisition_value) if asset.acquisition_value else '—' }}</div></div>
+          <div><div class="text-muted text-sm">Garantía hasta</div><div>{{ asset.warranty_until[:10] if asset.warranty_until else '—' }}</div></div>
+          <div><div class="text-muted text-sm">Proveedor</div><div>{{ asset.supplier or '—' }}</div></div>
+          <div><div class="text-muted text-sm">No. factura</div><div>{{ asset.invoice_number or '—' }}</div></div>
+          <div><div class="text-muted text-sm">Registrado</div><div>{{ asset.created_at[:10] if asset.created_at else '—' }}</div></div>
+        </div>
+        {% if asset.description %}
+        <div style="margin-top:1rem;"><div class="text-muted text-sm">Descripción</div><div>{{ asset.description }}</div></div>
+        {% endif %}
+        {% if asset.notes %}
+        <div style="margin-top:.75rem;"><div class="text-muted text-sm">Notas</div><div>{{ asset.notes }}</div></div>
+        {% endif %}
+      </div>
+    </div>
+
+    <!-- Movements -->
+    <div class="card">
+      <div class="card-header"><i class="bi bi-file-text"></i> Historial de movimientos</div>
+      <div class="table-wrapper">
+        {% if movements %}
+        <table>
+          <thead><tr><th>Tipo</th><th>Descripción</th><th>Realizado por</th><th>Fecha</th></tr></thead>
+          <tbody>
+            {% for m in movements %}
+            <tr>
+              <td><span class="badge badge-secondary">{{ m.movement_type }}</span></td>
+              <td class="text-sm">{{ m.description }}</td>
+              <td class="text-sm">{{ m.performed_by_user.name if m.performed_by_user else '—' }}</td>
+              <td class="text-sm text-muted">{{ m.created_at[:16] if m.created_at else '' }}</td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+        {% else %}
+        <div class="empty-state" style="padding:1.5rem;"><div class="empty-desc">Sin movimientos registrados</div></div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- Side -->
+  <div>
+    <div class="card mb-2">
+      <div class="card-header"><i class="bi bi-geo-alt"></i> Ubicación y responsable</div>
+      <div class="card-body">
+        <div class="mb-1"><div class="text-muted text-sm">Ubicación actual</div><div class="fw-bold">{{ asset.location.name if asset.location else '—' }}</div>{% if asset.location and asset.location.building %}<div class="text-sm text-muted">{{ asset.location.building }}{% if asset.location.floor %}, {{ asset.location.floor }}{% endif %}</div>{% endif %}</div>
+        <div><div class="text-muted text-sm">Responsable</div><div class="fw-bold">{{ asset.responsible_user.name if asset.responsible_user else '—' }}</div>{% if asset.responsible_user %}<div class="text-sm text-muted">{{ asset.responsible_user.email }}</div>{% endif %}</div>
+      </div>
+    </div>
+    {% if asset.qr_code_url %}
+    <div class="card">
+      <div class="card-header"><i class="bi bi-qr-code"></i> Código QR</div>
+      <div class="card-body text-center">
+        <img src="{{ asset.qr_code_url }}" alt="QR" class="qr-image" style="margin:0 auto .75rem;">
+        <div class="fw-bold text-sm" style="font-family:monospace;">{{ asset.code }}</div>
+        <div class="d-flex gap-1 mt-1" style="justify-content:center;">
+          <a href="{{ asset.qr_code_url }}" download="qr_{{ asset.code }}.png" class="btn btn-outline btn-sm"><i class="bi bi-download"></i> Descargar</a>
+        </div>
+      </div>
+    </div>
+    {% endif %}
+  </div>
+</div>
+{% endif %}
+{% endblock %}

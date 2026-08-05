@@ -1,0 +1,49 @@
+{% extends "admin/layout.html" %}
+{% block title %}{{ 'Editar' if is_edit else 'Nueva' }} Ubicación{% endblock %}
+{% block breadcrumb %}
+  <span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.locations') }}">Ubicaciones</a>
+  <span class="breadcrumb-sep">›</span><span>{{ 'Editar' if is_edit else 'Nueva' }}</span>
+{% endblock %}
+{% block content %}
+<div class="page-header"><h1 class="page-title">{{ '<i class="bi bi-pencil"></i> Editar ubicación' if is_edit else '<i class="bi bi-plus-lg"></i> Nueva ubicación' }}</h1></div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+<div class="card" style="max-width:600px;">
+  <div class="card-body">
+    <form method="POST" data-no-double-submit>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label">Nombre<span class="required">*</span></label>
+        <input type="text" name="name" class="form-control" required value="{{ location.name if location else '' }}" placeholder="Ej: Oficina Principal">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Edificio / Sede</label>
+          <input type="text" name="building" class="form-control" value="{{ location.building if location else '' }}" placeholder="Torre A, Bodega Norte…">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Piso / Nivel</label>
+          <input type="text" name="floor" class="form-control" value="{{ location.floor if location else '' }}" placeholder="Piso 1, Planta baja…">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción</label>
+        <textarea name="description" class="form-control" rows="3" placeholder="Descripción opcional">{{ location.description if location else '' }}</textarea>
+      </div>
+      {% if is_edit %}
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select name="is_active" class="form-control">
+          <option value="true" {% if location and location.is_active %}selected{% endif %}>Activa</option>
+          <option value="false" {% if location and not location.is_active %}selected{% endif %}>Inactiva</option>
+        </select>
+        <div class="form-hint"><i class="bi bi-exclamation-triangle-fill"></i> No puedes desactivar una ubicación con activos asignados.</div>
+      </div>
+      {% endif %}
+      <div class="d-flex gap-1 mt-2">
+        <button type="submit" class="btn btn-primary">{{ 'Guardar cambios' if is_edit else 'Crear ubicación' }}</button>
+        <a href="{{ url_for('admin.locations') }}" class="btn btn-ghost">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}

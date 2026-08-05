@@ -1,0 +1,51 @@
+{% extends "capturista/layout.html" %}
+{% block title %}Activos Devueltos{% endblock %}
+{% block page_title %}Activos Devueltos{% endblock %}
+{% block content %}
+<div style="margin-bottom:1.25rem;">
+  <h2 style="font-size:1.15rem;font-weight:700;color:var(--blue-dark);margin:0 0 .25rem;">Activos devueltos para corrección</h2>
+  <p class="text-muted text-sm">El administrador devolvió estos activos porque requieren atención. Corrígelos para continuar.</p>
+</div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+
+{% if returned_items %}
+<div style="display:flex;flex-direction:column;gap:.75rem;">
+  {% for entry in returned_items %}
+  {% set item = entry.item %}
+  {% set audit = entry.audit %}
+  <div class="card" style="border-left:4px solid #D4A017;">
+    <div class="card-body" style="padding:.9rem 1.1rem;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
+        <div>
+          <div style="display:flex;align-items:center;gap:.5rem;margin-bottom:.3rem;flex-wrap:wrap;">
+            <span class="badge badge-warning"><i class="bi bi-arrow-repeat"></i> Devuelto</span>
+            {% if audit.audit_code %}
+            <span style="font-family:monospace;font-size:.75rem;color:var(--text-muted);">{{ audit.audit_code }}</span>
+            {% endif %}
+          </div>
+          <div class="fw-bold" style="margin-bottom:.2rem;">{{ item.asset.name if item.asset else item.get('asset_name', '—') }}</div>
+          <div style="font-family:monospace;font-size:.8rem;color:var(--text-muted);margin-bottom:.3rem;">{{ item.asset.code if item.asset else item.get('asset_code', '—') }}</div>
+          {% if item.notes %}
+          <div class="text-sm" style="color:#92400e;background:#fff3cd;padding:.35rem .6rem;border-radius:6px;display:inline-block;">
+            <i class="bi bi-chat-dots"></i> {{ item.notes|truncate(120) }}
+          </div>
+          {% endif %}
+          <div class="text-sm text-muted" style="margin-top:.3rem;">Auditoría: {{ audit.title }}</div>
+          {% if item.returned_at %}
+          <div class="text-sm text-muted">Devuelto: {{ item.returned_at[:16] }}</div>
+          {% endif %}
+        </div>
+        <a href="{{ url_for('capturista.correct_item', session_id=audit.id, item_id=item.id) }}" class="btn btn-warning" style="white-space:nowrap;"><i class="bi bi-wrench-adjustable"></i> Corregir</a>
+      </div>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% else %}
+<div class="empty-state">
+  <div class="empty-icon"><i class="bi bi-check-circle-fill"></i></div>
+  <div class="empty-title">Sin activos devueltos</div>
+  <div class="empty-desc">No tienes activos pendientes de corrección. ¡Buen trabajo!</div>
+</div>
+{% endif %}
+{% endblock %}

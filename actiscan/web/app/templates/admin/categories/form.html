@@ -1,0 +1,38 @@
+{% extends "admin/layout.html" %}
+{% block title %}{{ 'Editar' if is_edit else 'Nueva' }} Categoría{% endblock %}
+{% block breadcrumb %}
+  <span class="breadcrumb-sep">›</span><a href="{{ url_for('admin.categories') }}">Catálogos</a>
+  <span class="breadcrumb-sep">›</span><span>{{ 'Editar' if is_edit else 'Nueva' }}</span>
+{% endblock %}
+{% block content %}
+<div class="page-header"><h1 class="page-title">{{ '<i class="bi bi-pencil"></i> Editar categoría' if is_edit else '<i class="bi bi-plus-lg"></i> Nueva categoría' }}</h1></div>
+{% if error %}<div class="alert alert-danger"><i class="bi bi-exclamation-triangle-fill"></i> {{ error }}</div>{% endif %}
+<div class="card" style="max-width:500px;">
+  <div class="card-body">
+    <form method="POST" data-no-double-submit>
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+      <div class="form-group">
+        <label class="form-label">Nombre<span class="required">*</span></label>
+        <input type="text" name="name" class="form-control" required value="{{ category.name if category else '' }}" placeholder="Ej: Equipos de Cómputo">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Descripción</label>
+        <textarea name="description" class="form-control" rows="3">{{ category.description if category else '' }}</textarea>
+      </div>
+      {% if is_edit %}
+      <div class="form-group">
+        <label class="form-label">Estado</label>
+        <select name="is_active" class="form-control">
+          <option value="true" {% if category and category.is_active %}selected{% endif %}>Activa</option>
+          <option value="false" {% if category and not category.is_active %}selected{% endif %}>Inactiva</option>
+        </select>
+      </div>
+      {% endif %}
+      <div class="d-flex gap-1 mt-2">
+        <button type="submit" class="btn btn-primary">{{ 'Guardar' if is_edit else 'Crear categoría' }}</button>
+        <a href="{{ url_for('admin.categories') }}" class="btn btn-ghost">Cancelar</a>
+      </div>
+    </form>
+  </div>
+</div>
+{% endblock %}
